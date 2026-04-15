@@ -82,7 +82,7 @@ export function GearFormDialog({ open, onOpenChange, gear }: GearFormDialogProps
     } else {
       await createGear.mutateAsync(payload, {
         onSuccess: () => { toast.success('장비가 추가되었습니다.'); onOpenChange(false) },
-        onError: () => toast.error('추가에 실패했습니다.'),
+        onError: (e) => toast.error(`추가 실패: ${e instanceof Error ? e.message : String(e)}`),
       })
     }
   }
