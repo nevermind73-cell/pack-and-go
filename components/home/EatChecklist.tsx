@@ -1,14 +1,17 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRecipes, type Recipe } from '@/hooks/useRecipes'
 import { useShoppingStore } from '@/stores/shoppingStore'
 import { useTripCheckStore } from '@/stores/tripStore'
+import { useCurrentTrip, useUpdateTrip } from '@/hooks/useTrips'
 import { RecipeDetailDialog } from './RecipeDetailDialog'
 
 export function EatChecklist() {
+  const { data: trip } = useCurrentTrip()
+  const updateTrip = useUpdateTrip()
   const { data: recipeList } = useRecipes()
   const shoppingStore = useShoppingStore()
   const { checkedIngredientKeys, toggleIngredientCheck } = useTripCheckStore()
@@ -16,10 +19,15 @@ export function EatChecklist() {
 
   const safeList = Array.isArray(recipeList) ? recipeList : []
 
+  // DB 우선, 없으면 로컬 store fallback
+  const sourceIds: string[] = trip
+    ? (Array.isArray(trip.shopping_recipe_ids) ? trip.shopping_recipe_ids : [])
+    : shoppingStore.committedRecipeIds
+
   const selectedRecipes = useMemo(
-    () => safeList.filter((r) => shoppingStore.isCommitted(r.id)),
+    () => safeList.filter((r) => sourceIds.includes(r.id)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [safeList, shoppingStore.committedRecipeIds]
+    [safeList, sourceIds.join(',')]
   )
 
   const totalIngredients = selectedRecipes.reduce(
@@ -30,10 +38,18 @@ export function EatChecklist() {
     selectedRecipes.some((r) => k.startsWith(r.id + '::'))
   ).length
 
+  function handleRemoveRecipe(recipeId: string) {
+    if (trip) {
+      const next = sourceIds.filter((id) => id !== recipeId)
+      updateTrip.mutate({ id: trip.id, shopping_recipe_ids: next })
+    } else {
+      shoppingStore.removeCommitted(recipeId)
+    }
+  }
+
   return (
     <>
       <div className="bg-card rounded-xl border flex flex-col overflow-hidden">
-        {/* 헤더 */}
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <h2 className="font-semibold text-sm">Eat</h2>
           <span className="text-xs text-muted-foreground">
@@ -41,7 +57,6 @@ export function EatChecklist() {
           </span>
         </div>
 
-        {/* 내용 */}
         <div className="flex-1 overflow-y-auto max-h-72">
           {selectedRecipes.length === 0 ? (
             <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
@@ -49,59 +64,14 @@ export function EatChecklist() {
             </div>
           ) : (
             selectedRecipes.map((recipe) => (
-              <div key={recipe.id}>
-                {/* 요리명 헤더 */}
-                <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-                  <span className="text-sm font-semibold flex-1">{recipe.name}</span>
-                  <button
-                    onClick={() => setDetailRecipe(recipe)}
-                    title="레시피 보기"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <BookOpen className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                <div className="mx-4 border-b" />
-
-                {/* 재료 목록 */}
-                {recipe.ingredients?.length ? (
-                  recipe.ingredients.map((ing, idx) => {
-                    const key = `${recipe.id}::${idx}`
-                    const isChecked = checkedIngredientKeys.includes(key)
-                    return (
-                      <label
-                        key={key}
-                        className="flex items-center gap-3 px-4 py-2 hover:bg-muted/30 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          className="rounded border-muted-foreground"
-                          checked={isChecked}
-                          onChange={() => toggleIngredientCheck(key)}
-                        />
-                        <span
-                          className={cn(
-                            'flex-1 text-sm',
-                            isChecked && 'line-through text-muted-foreground'
-                          )}
-                        >
-                          {ing.name}
-                        </span>
-                        <span
-                          className={cn(
-                            'text-sm text-muted-foreground',
-                            isChecked && 'line-through'
-                          )}
-                        >
-                          {ing.amount}
-                        </span>
-                      </label>
-                    )
-                  })
-                ) : (
-                  <p className="px-4 py-2 text-sm text-muted-foreground">재료 없음</p>
-                )}
-              </div>
+              <RecipeSection
+                key={recipe.id}
+                recipe={recipe}
+                checkedIngredientKeys={checkedIngredientKeys}
+                onToggleIngredient={toggleIngredientCheck}
+                onRemoveRecipe={() => handleRemoveRecipe(recipe.id)}
+                onShowDetail={() => setDetailRecipe(recipe)}
+              />
             ))
           )}
         </div>
@@ -113,5 +83,74 @@ export function EatChecklist() {
         onOpenChange={(open) => { if (!open) setDetailRecipe(null) }}
       />
     </>
+  )
+}
+
+function RecipeSection({
+  recipe, checkedIngredientKeys, onToggleIngredient, onRemoveRecipe, onShowDetail,
+}: {
+  recipe: Recipe
+  checkedIngredientKeys: string[]
+  onToggleIngredient: (key: string) => void
+  onRemoveRecipe: () => void
+  onShowDetail: () => void
+}) {
+  const [headerHovered, setHeaderHovered] = useState(false)
+
+  return (
+    <div>
+      <div
+        className="flex items-center gap-2 px-4 pt-3 pb-1"
+        onMouseEnter={() => setHeaderHovered(true)}
+        onMouseLeave={() => setHeaderHovered(false)}
+      >
+        <span className="text-sm font-semibold flex-1">{recipe.name}</span>
+        <button
+          onClick={onShowDetail}
+          title="레시피 보기"
+          className="text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <BookOpen className="h-3.5 w-3.5" />
+        </button>
+        {headerHovered && (
+          <button
+            onClick={onRemoveRecipe}
+            title="목록에서 제거"
+            className="text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      <div className="mx-4 border-b" />
+
+      {recipe.ingredients?.length ? (
+        recipe.ingredients.map((ing, idx) => {
+          const key = `${recipe.id}::${idx}`
+          const isChecked = checkedIngredientKeys.includes(key)
+          return (
+            <label
+              key={key}
+              className="flex items-center gap-3 px-4 py-2 hover:bg-muted/30 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                className="rounded border-muted-foreground"
+                checked={isChecked}
+                onChange={() => onToggleIngredient(key)}
+              />
+              <span className={cn('flex-1 text-sm', isChecked && 'line-through text-muted-foreground')}>
+                {ing.name}
+              </span>
+              <span className={cn('text-sm text-muted-foreground', isChecked && 'line-through')}>
+                {ing.amount}
+              </span>
+            </label>
+          )
+        })
+      ) : (
+        <p className="px-4 py-2 text-sm text-muted-foreground">재료 없음</p>
+      )}
+    </div>
   )
 }

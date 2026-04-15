@@ -6,10 +6,13 @@ import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRecipes } from '@/hooks/useRecipes'
 import { useShoppingStore } from '@/stores/shoppingStore'
+import { useCurrentTrip, useUpdateTrip } from '@/hooks/useTrips'
 
 export function ShoppingPanel() {
   const { data: recipeList } = useRecipes()
   const shoppingStore = useShoppingStore()
+  const { data: currentTrip } = useCurrentTrip()
+  const updateTrip = useUpdateTrip()
 
   const safeList = Array.isArray(recipeList) ? recipeList : []
 
@@ -23,12 +26,22 @@ export function ShoppingPanel() {
     shoppingStore.toggleRecipe(id)
   }
 
-  function handleAddToShoppingList() {
+  async function handleAddToShoppingList() {
     if (selectedRecipes.length === 0) {
       toast.error('레시피를 선택해주세요.')
       return
     }
     shoppingStore.commit()
+    if (currentTrip) {
+      try {
+        await updateTrip.mutateAsync({
+          id: currentTrip.id,
+          shopping_recipe_ids: shoppingStore.selectedRecipeIds,
+        })
+      } catch {
+        toast.error('서버 저장 실패 — 로컬에만 반영됩니다')
+      }
+    }
     const total = selectedRecipes.reduce((sum, r) => sum + (r.ingredients?.length ?? 0), 0)
     toast.success(`${selectedRecipes.length}개 레시피, ${total}개 재료가 홈 체크리스트에 반영되었습니다.`)
   }

@@ -26,6 +26,7 @@ interface PackStore {
   committedItems: PackItem[]
   commit: () => void
   clearCommitted: () => void
+  removeCommitted: (gearId: string) => void
 }
 
 export const usePackStore = create<PackStore>()(
@@ -81,6 +82,8 @@ export const usePackStore = create<PackStore>()(
       committedItems: [],
       commit: () => set((s) => ({ committedItems: [...s.items] })),
       clearCommitted: () => set({ committedItems: [] }),
+      removeCommitted: (gearId) =>
+        set((s) => ({ committedItems: s.committedItems.filter((i) => i.gearId !== gearId) })),
     }),
     { name: 'pack-and-go:pack' }
   )

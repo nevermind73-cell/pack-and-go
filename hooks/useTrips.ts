@@ -18,6 +18,13 @@ export interface TripSiteEntry {
   site: Pick<Site, 'id' | 'name' | 'lat' | 'lng' | 'distance_km' | 'address' | 'region'>
 }
 
+export interface PackItem {
+  gearId: string
+  quantity: number
+  isWorn: boolean
+  isConsumable: boolean
+}
+
 export interface Trip {
   id: string
   user_id: string
@@ -26,6 +33,8 @@ export interface Trip {
   end_date: string | null
   status: 'planned' | 'done'
   todos: TodoItem[]
+  pack_items: PackItem[]
+  shopping_recipe_ids: string[]
   created_at: string
   trip_sites: TripSiteEntry[]
 }
@@ -73,6 +82,8 @@ export interface UpdateTripInput {
   start_date?: string
   end_date?: string
   sites?: { site_id: string; start_date: string; end_date?: string }[]
+  pack_items?: PackItem[]
+  shopping_recipe_ids?: string[]
 }
 
 export function useUpdateTrip() {

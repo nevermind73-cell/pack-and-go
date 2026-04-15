@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { usePackStore } from '@/stores/packStore'
 import { useGear } from '@/hooks/useGear'
 import { SaveListDialog } from './SaveListDialog'
+import { useCurrentTrip, useUpdateTrip } from '@/hooks/useTrips'
 
 function formatKg(g: number): string {
   return `${(g / 1000).toFixed(2)} kg`
@@ -16,6 +17,8 @@ function formatKg(g: number): string {
 export function PackPanel() {
   const packStore = usePackStore()
   const { data: gearList } = useGear()
+  const { data: currentTrip } = useCurrentTrip()
+  const updateTrip = useUpdateTrip()
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
 
   const safeGearList = Array.isArray(gearList) ? gearList : []
@@ -57,12 +60,19 @@ export function PackPanel() {
     .reduce((sum, i) => sum + (i.gear.weight_g ?? 0) * i.quantity, 0)
   const baseWeightG = totalWeightG - wornWeightG - consumableWeightG
 
-  function handlePack() {
+  async function handlePack() {
     if (packStore.items.length === 0) {
       toast.error('Pack에 장비가 없습니다.')
       return
     }
     packStore.commit()
+    if (currentTrip) {
+      try {
+        await updateTrip.mutateAsync({ id: currentTrip.id, pack_items: packStore.items })
+      } catch {
+        toast.error('서버 저장 실패 — 로컬에만 반영됩니다')
+      }
+    }
     toast.success(`${packStore.items.length}개 장비가 홈 체크리스트에 반영되었습니다.`)
   }
 

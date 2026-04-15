@@ -14,6 +14,7 @@ interface ShoppingStore {
   committedRecipeIds: string[]
   commit: () => void
   isCommitted: (id: string) => boolean
+  removeCommitted: (id: string) => void
 }
 
 export const useShoppingStore = create<ShoppingStore>()(
@@ -38,6 +39,8 @@ export const useShoppingStore = create<ShoppingStore>()(
         set((s) => ({ committedRecipeIds: [...s.selectedRecipeIds] })),
 
       isCommitted: (id) => get().committedRecipeIds.includes(id),
+      removeCommitted: (id) =>
+        set((s) => ({ committedRecipeIds: s.committedRecipeIds.filter((x) => x !== id) })),
     }),
     { name: 'pack-and-go:shopping' }
   )

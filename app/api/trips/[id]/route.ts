@@ -9,7 +9,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params
   const body = await request.json()
-  const { status, todos, title, start_date, end_date, sites } = body
+  const { status, todos, title, start_date, end_date, sites, pack_items, shopping_recipe_ids } = body
 
   // 본인 여행인지 확인
   const { data: existing } = await supabase
@@ -27,6 +27,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (title !== undefined) updates.title = title
   if (start_date !== undefined) updates.start_date = start_date
   if (end_date !== undefined) updates.end_date = end_date || null
+  if (pack_items !== undefined) updates.pack_items = pack_items
+  if (shopping_recipe_ids !== undefined) updates.shopping_recipe_ids = shopping_recipe_ids
 
   const { data, error } = await supabase
     .from('trips')

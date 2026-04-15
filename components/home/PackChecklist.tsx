@@ -1,19 +1,28 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { usePackStore } from '@/stores/packStore'
 import { useGear } from '@/hooks/useGear'
 import { useTripCheckStore } from '@/stores/tripStore'
+import { useCurrentTrip, useUpdateTrip, type PackItem } from '@/hooks/useTrips'
 
 function formatWeight(g: number): string {
   return g >= 1000 ? `${(g / 1000).toFixed(2)} kg` : `${g} g`
 }
 
 export function PackChecklist() {
-  const { committedItems } = usePackStore()
+  const { data: trip } = useCurrentTrip()
+  const updateTrip = useUpdateTrip()
+  const { committedItems, removeCommitted } = usePackStore()
   const { data: gearList } = useGear()
   const { checkedGearIds, toggleGearCheck } = useTripCheckStore()
+
+  // DB 우선, 없으면 로컬 store fallback
+  const sourceItems: PackItem[] = trip
+    ? (Array.isArray(trip.pack_items) ? trip.pack_items : [])
+    : committedItems
 
   const safeGearList = Array.isArray(gearList) ? gearList : []
   const gearMap = useMemo(
@@ -23,10 +32,10 @@ export function PackChecklist() {
 
   const packWithGear = useMemo(
     () =>
-      committedItems
+      sourceItems
         .map((item) => ({ ...item, gear: gearMap[item.gearId] }))
         .filter((item) => item.gear),
-    [committedItems, gearMap]
+    [sourceItems, gearMap]
   )
 
   const grouped = useMemo(() => {
@@ -43,23 +52,27 @@ export function PackChecklist() {
     (sum, i) => sum + (i.gear.weight_g ?? 0) * i.quantity,
     0
   )
-
   const checkedCount = packWithGear.filter((i) => checkedGearIds.includes(i.gearId)).length
+
+  function handleRemove(gearId: string) {
+    if (trip) {
+      const next = sourceItems.filter((i) => i.gearId !== gearId)
+      updateTrip.mutate({ id: trip.id, pack_items: next })
+    } else {
+      removeCommitted(gearId)
+    }
+  }
 
   return (
     <div className="bg-card rounded-xl border flex flex-col overflow-hidden">
-      {/* 헤더 */}
       <div className="flex items-center justify-between px-4 py-3 border-b">
         <h2 className="font-semibold text-sm">Pack</h2>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>
-            {checkedCount}/{packWithGear.length}
-          </span>
+          <span>{checkedCount}/{packWithGear.length}</span>
           {totalWeightG > 0 && <span>{formatWeight(totalWeightG)}</span>}
         </div>
       </div>
 
-      {/* 내용 */}
       <div className="flex-1 overflow-y-auto max-h-72">
         {packWithGear.length === 0 ? (
           <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
@@ -77,39 +90,66 @@ export function PackChecklist() {
               {items.map((item) => {
                 const isChecked = checkedGearIds.includes(item.gearId)
                 return (
-                  <label
+                  <PackRow
                     key={item.gearId}
-                    className="flex items-center gap-3 px-4 py-2 hover:bg-muted/30 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      className="rounded border-muted-foreground"
-                      checked={isChecked}
-                      onChange={() => toggleGearCheck(item.gearId)}
-                    />
-                    <span
-                      className={cn(
-                        'flex-1 text-sm',
-                        isChecked && 'line-through text-muted-foreground'
-                      )}
-                    >
-                      {item.gear.name}
-                    </span>
-                    {item.quantity > 1 && (
-                      <span className="text-xs text-muted-foreground">×{item.quantity}</span>
-                    )}
-                    {item.gear.weight_g > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {item.gear.weight_g * item.quantity}g
-                      </span>
-                    )}
-                  </label>
+                    name={item.gear.name}
+                    quantity={item.quantity}
+                    weightG={item.gear.weight_g}
+                    isChecked={isChecked}
+                    onToggle={() => toggleGearCheck(item.gearId)}
+                    onRemove={() => handleRemove(item.gearId)}
+                  />
                 )
               })}
             </div>
           ))
         )}
       </div>
+    </div>
+  )
+}
+
+function PackRow({
+  name, quantity, weightG, isChecked, onToggle, onRemove,
+}: {
+  name: string
+  quantity: number
+  weightG: number
+  isChecked: boolean
+  onToggle: () => void
+  onRemove: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <div
+      className="flex items-center gap-3 px-4 py-2 hover:bg-muted/30"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <input
+        type="checkbox"
+        className="rounded border-muted-foreground cursor-pointer"
+        checked={isChecked}
+        onChange={onToggle}
+      />
+      <span className={cn('flex-1 text-sm', isChecked && 'line-through text-muted-foreground')}>
+        {name}
+      </span>
+      {quantity > 1 && (
+        <span className="text-xs text-muted-foreground">×{quantity}</span>
+      )}
+      {weightG > 0 && !hovered && (
+        <span className="text-xs text-muted-foreground">{weightG * quantity}g</span>
+      )}
+      {hovered && (
+        <button
+          onClick={onRemove}
+          className="text-muted-foreground hover:text-destructive transition-colors"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
     </div>
   )
 }
