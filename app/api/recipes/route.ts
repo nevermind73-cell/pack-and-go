@@ -1,16 +1,14 @@
-import { createServiceClient } from '@/lib/supabase/server'
-import { auth } from '@/lib/auth'
+import { createServerClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { data, error } = await supabase
     .from('recipes')
     .select('*')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
 
@@ -19,10 +17,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await request.json()
   const { name, category, servings, instructions, ingredients } = body
 
@@ -31,7 +28,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from('recipes')
     .insert({
-      user_id: session.user.id,
+      user_id: user.id,
       name,
       category: category || null,
       servings: servings ?? 2,

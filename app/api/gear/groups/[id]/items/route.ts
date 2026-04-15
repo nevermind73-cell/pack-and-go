@@ -1,15 +1,13 @@
-import { createServiceClient } from '@/lib/supabase/server'
-import { auth } from '@/lib/auth'
+import { createServerClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id: gear_group_id } = await params
   const { gear_id } = await request.json()
 
@@ -17,7 +15,7 @@ export async function POST(
     .from('gear_groups')
     .select('id')
     .eq('id', gear_group_id)
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .single()
 
   if (!group) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -36,10 +34,9 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id: gear_group_id } = await params
   const { gear_id } = await request.json()
 
@@ -47,7 +44,7 @@ export async function DELETE(
     .from('gear_groups')
     .select('id')
     .eq('id', gear_group_id)
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .single()
 
   if (!group) return NextResponse.json({ error: 'Not found' }, { status: 404 })

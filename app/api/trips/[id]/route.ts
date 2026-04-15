@@ -1,14 +1,13 @@
-import { createServiceClient } from '@/lib/supabase/server'
-import { auth } from '@/lib/auth'
+import { createServerClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 // PATCH /api/trips/[id] → 여행 업데이트 (status, todos)
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const supabase = createServiceClient()
   const body = await request.json()
   const { status, todos, title, start_date, end_date, sites } = body
 
@@ -17,7 +16,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .from('trips')
     .select('id')
     .eq('id', id)
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .maybeSingle()
 
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -60,7 +59,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (status === 'done') {
     await supabase
       .from('diary')
-      .upsert({ user_id: session.user.id, trip_id: id, content: '', photos: [] })
+      .upsert({ user_id: user.id, trip_id: id, content: '', photos: [] })
   }
 
   return NextResponse.json(data)
@@ -68,17 +67,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 // DELETE /api/trips/[id] → 여행 취소 (삭제)
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const supabase = createServiceClient()
 
   const { error } = await supabase
     .from('trips')
     .delete()
     .eq('id', id)
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return new NextResponse(null, { status: 204 })

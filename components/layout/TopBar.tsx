@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { signOut } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { Menu, LogOut } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -37,7 +38,14 @@ interface TopBarProps {
 
 export function TopBar({ user }: TopBarProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const [sheetOpen, setSheetOpen] = useState(false)
+
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
   const title =
     Object.entries(pageTitles).find(([path]) =>
       path === '/' ? pathname === '/' : pathname.startsWith(path)
@@ -107,7 +115,7 @@ export function TopBar({ user }: TopBarProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive focus:text-destructive cursor-pointer"
-            onClick={() => signOut({ callbackUrl: '/login' })}
+            onClick={handleSignOut}
           >
             <LogOut size={14} className="mr-2" />
             로그아웃

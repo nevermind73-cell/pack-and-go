@@ -1,16 +1,14 @@
-import { createServiceClient } from '@/lib/supabase/server'
-import { auth } from '@/lib/auth'
+import { createServerClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { data, error } = await supabase
     .from('sites')
     .select('*')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .order('region', { ascending: true })
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
@@ -20,10 +18,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await request.json()
   const {
     name, site_type, region, address, lat, lng,
@@ -36,7 +33,7 @@ export async function POST(request: Request) {
   const { data: lastInRegion } = await supabase
     .from('sites')
     .select('sort_order')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .eq('region', region || '기타')
     .order('sort_order', { ascending: false })
     .limit(1)
@@ -47,7 +44,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from('sites')
     .insert({
-      user_id: session.user.id,
+      user_id: user.id,
       name: name.trim(),
       site_type: site_type || '사설 캠핑장',
       region: (region || '기타').trim(),

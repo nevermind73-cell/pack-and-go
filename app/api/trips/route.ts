@@ -1,13 +1,11 @@
-import { createServiceClient } from '@/lib/supabase/server'
-import { auth } from '@/lib/auth'
+import { createServerClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 // GET /api/trips → 현재 planned 상태의 여행 (최신 1건)
 export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { data, error } = await supabase
     .from('trips')
     .select(`
@@ -17,7 +15,7 @@ export async function GET() {
         site:sites (id, name, lat, lng, distance_km, address, region)
       )
     `)
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .eq('status', 'planned')
     .order('created_at', { ascending: false })
     .limit(1)
@@ -29,10 +27,9 @@ export async function GET() {
 
 // POST /api/trips → 새 여행 생성
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await request.json()
   const { title, start_date, end_date, sites } = body
 
@@ -43,7 +40,7 @@ export async function POST(request: Request) {
   const { data: trip, error: tripError } = await supabase
     .from('trips')
     .insert({
-      user_id: session.user.id,
+      user_id: user.id,
       title,
       start_date,
       end_date: end_date || null,

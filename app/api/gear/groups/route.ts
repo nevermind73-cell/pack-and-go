@@ -1,12 +1,10 @@
-import { createServiceClient } from '@/lib/supabase/server'
-import { auth } from '@/lib/auth'
+import { createServerClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { data, error } = await supabase
     .from('gear_groups')
     .select(`
@@ -16,7 +14,7 @@ export async function GET() {
         gear (id, name, category, memo)
       )
     `)
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .order('is_favorite', { ascending: false })
     .order('created_at', { ascending: false })
 
@@ -25,17 +23,16 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const supabase = createServiceClient()
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { name } = await request.json()
 
   if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
 
   const { data, error } = await supabase
     .from('gear_groups')
-    .insert({ user_id: session.user.id, name })
+    .insert({ user_id: user.id, name })
     .select()
     .single()
 
