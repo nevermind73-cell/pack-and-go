@@ -17,9 +17,9 @@ export function EatChecklist() {
   const safeList = Array.isArray(recipeList) ? recipeList : []
 
   const selectedRecipes = useMemo(
-    () => safeList.filter((r) => shoppingStore.isSelected(r.id)),
+    () => safeList.filter((r) => shoppingStore.isCommitted(r.id)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [safeList, shoppingStore.selectedRecipeIds]
+    [safeList, shoppingStore.committedRecipeIds]
   )
 
   const totalIngredients = selectedRecipes.reduce(

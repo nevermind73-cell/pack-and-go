@@ -347,6 +347,7 @@ export function GearListPanel() {
           if (!open) setDetailTarget(undefined)
         }}
         gear={detailTarget}
+        onEdit={() => detailTarget && handleEdit(detailTarget)}
       />
     </div>
   )

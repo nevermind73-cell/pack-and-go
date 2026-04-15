@@ -6,13 +6,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Pencil } from 'lucide-react'
 import type { Gear } from '@/hooks/useGear'
 
 interface GearDetailDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   gear: Gear | undefined
+  onEdit?: () => void
 }
 
 function Row({ label, value }: { label: string; value?: string | number | null }) {
@@ -25,12 +28,22 @@ function Row({ label, value }: { label: string; value?: string | number | null }
   )
 }
 
-export function GearDetailDialog({ open, onOpenChange, gear }: GearDetailDialogProps) {
+export function GearDetailDialog({ open, onOpenChange, gear, onEdit }: GearDetailDialogProps) {
   if (!gear) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
+        {/* 수정 버튼: 닫기 버튼 왼쪽 */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="absolute top-2 right-10"
+          onClick={() => { onOpenChange(false); onEdit?.() }}
+          title="수정"
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             {gear.name}

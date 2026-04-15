@@ -28,6 +28,7 @@ export function ShoppingPanel() {
       toast.error('레시피를 선택해주세요.')
       return
     }
+    shoppingStore.commit()
     const total = selectedRecipes.reduce((sum, r) => sum + (r.ingredients?.length ?? 0), 0)
     toast.success(`${selectedRecipes.length}개 레시피, ${total}개 재료가 홈 체크리스트에 반영되었습니다.`)
   }
