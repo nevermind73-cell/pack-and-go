@@ -71,19 +71,19 @@ export function GearFormDialog({ open, onOpenChange, gear }: GearFormDialogProps
       memo: memo.trim() || undefined,
     }
 
-    if (isEdit) {
-      await updateGear.mutateAsync(
-        { id: gear.id, ...payload },
-        {
-          onSuccess: () => { toast.success('장비가 수정되었습니다.'); onOpenChange(false) },
-          onError: () => toast.error('수정에 실패했습니다.'),
-        }
-      )
-    } else {
-      await createGear.mutateAsync(payload, {
-        onSuccess: () => { toast.success('장비가 추가되었습니다.'); onOpenChange(false) },
-        onError: (e) => toast.error(`추가 실패: ${e instanceof Error ? e.message : String(e)}`),
-      })
+    try {
+      if (isEdit) {
+        await updateGear.mutateAsync({ id: gear.id, ...payload })
+        toast.success('장비가 수정되었습니다.')
+      } else {
+        await createGear.mutateAsync(payload)
+        toast.success('장비가 추가되었습니다.')
+      }
+      onOpenChange(false)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('[GearFormDialog]', msg)
+      toast.error(msg)
     }
   }
 
