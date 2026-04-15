@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { Menu, LogOut } from 'lucide-react'
@@ -36,6 +37,7 @@ interface TopBarProps {
 
 export function TopBar({ user }: TopBarProps) {
   const pathname = usePathname()
+  const [sheetOpen, setSheetOpen] = useState(false)
   const title =
     Object.entries(pageTitles).find(([path]) =>
       path === '/' ? pathname === '/' : pathname.startsWith(path)
@@ -45,7 +47,7 @@ export function TopBar({ user }: TopBarProps) {
     <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background">
       {/* 모바일 햄버거 메뉴 */}
       <div className="flex items-center gap-3">
-        <Sheet>
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger
             className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'md:hidden')}
           >
@@ -65,6 +67,7 @@ export function TopBar({ user }: TopBarProps) {
                   <Link
                     key={href}
                     href={href}
+                    onClick={() => setSheetOpen(false)}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
                       isActive
