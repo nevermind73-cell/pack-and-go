@@ -17,24 +17,27 @@ export default function SitePage() {
   return (
     <div className="flex flex-col h-full gap-3">
       {/* 툴바 */}
-      <div className="flex items-center gap-3">
-        <Button onClick={() => setAddDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          새 캠핑장 추가
-        </Button>
+      <div className="flex flex-wrap gap-3">
+        {/* 1행: 추가 버튼 + 검색 */}
+        <div className="flex items-center gap-3 w-full sm:w-auto sm:flex-1">
+          <Button onClick={() => setAddDialogOpen(true)} className="shrink-0">
+            <Plus className="h-4 w-4 mr-1.5" />
+            새 캠핑장 추가
+          </Button>
 
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder="캠핑장 검색"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          <div className="relative flex-1 sm:max-w-sm">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-8"
+              placeholder="캠핑장 검색"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
 
-        {/* 전체 / 즐겨찾기 필터 */}
-        <div className="ml-auto flex items-center rounded-md border overflow-hidden">
+        {/* 2행(모바일) / 1행 우측(데스크탑): 전체/즐겨찾기 필터 */}
+        <div className="flex items-center rounded-md border overflow-hidden sm:ml-auto">
           <button
             type="button"
             onClick={() => setFilterMode('all')}
