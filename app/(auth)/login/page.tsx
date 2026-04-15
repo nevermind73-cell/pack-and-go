@@ -1,9 +1,27 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { Suspense } from 'react'
 
-export default function LoginPage() {
+function LoginContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const code = searchParams.get('code')
+    if (!code) return
+
+    const supabase = createClient()
+    supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+      if (!error) {
+        router.replace('/')
+      }
+    })
+  }, [searchParams, router])
+
   async function handleSignIn() {
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
@@ -17,14 +35,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm flex flex-col items-center gap-8 p-8">
-        {/* 로고 */}
         <div className="flex flex-col items-center gap-2">
           <span className="text-5xl">⛺</span>
           <h1 className="text-3xl font-bold tracking-tight">Pack &amp; Go!</h1>
           <p className="text-sm text-muted-foreground">캠핑을 준비하고 기록하세요</p>
         </div>
 
-        {/* 구글 로그인 버튼 */}
         <Button
           variant="outline"
           className="w-full gap-3 h-11"
@@ -35,6 +51,14 @@ export default function LoginPage() {
         </Button>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   )
 }
 
