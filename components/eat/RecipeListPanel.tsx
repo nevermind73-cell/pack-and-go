@@ -221,45 +221,50 @@ export function RecipeListPanel() {
   return (
     <div className="flex flex-col h-full">
       {/* 툴바 */}
-      <div className="flex gap-2 p-3 border-b shrink-0">
-        <Button size="sm" className="h-8 shrink-0" onClick={() => setAddDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          새 레시피 추가
-        </Button>
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="레시피 검색"
-            className="pl-8 h-8 text-sm"
-          />
-        </div>
-        {/* 즐겨찾기 토글 */}
-        <div className="flex h-8 shrink-0 rounded-md border border-input overflow-hidden text-sm">
-          <button
-            onClick={() => setFavOnly(false)}
-            className={`px-3 transition-colors ${
-              !favOnly ? 'bg-foreground text-background' : 'bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-            }`}
-          >
-            전체
-          </button>
-          <button
-            onClick={() => setFavOnly(true)}
-            className={`px-3 transition-colors ${
-              favOnly ? 'bg-foreground text-background' : 'bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-            }`}
-          >
-            즐겨찾기
-          </button>
+      <div className="flex flex-col gap-2 p-3 border-b shrink-0">
+        {/* 1행: 추가 버튼 + 검색 */}
+        <div className="flex gap-2">
+          <Button size="sm" className="h-8 shrink-0" onClick={() => setAddDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            새 레시피 추가
+          </Button>
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="레시피 검색"
+              className="pl-8 h-8 text-sm"
+            />
+          </div>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex items-center gap-1.5 h-8 shrink-0 rounded-md border border-input bg-background px-3 text-sm hover:bg-accent hover:text-accent-foreground transition-colors">
-            {SORT_LABELS[sortKey]}
-            <ChevronDown className="h-3.5 w-3.5" />
-          </DropdownMenuTrigger>
+        {/* 2행: 즐겨찾기 토글 + 정렬 */}
+        <div className="flex gap-2">
+          <div className="flex h-8 rounded-md border border-input overflow-hidden text-sm">
+            <button
+              onClick={() => setFavOnly(false)}
+              className={`px-3 transition-colors ${
+                !favOnly ? 'bg-foreground text-background' : 'bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              }`}
+            >
+              전체
+            </button>
+            <button
+              onClick={() => setFavOnly(true)}
+              className={`px-3 transition-colors ${
+                favOnly ? 'bg-foreground text-background' : 'bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              }`}
+            >
+              즐겨찾기
+            </button>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex items-center gap-1.5 h-8 shrink-0 rounded-md border border-input bg-background px-3 text-sm hover:bg-accent hover:text-accent-foreground transition-colors">
+              {SORT_LABELS[sortKey]}
+              <ChevronDown className="h-3.5 w-3.5" />
+            </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuRadioGroup value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
               {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
@@ -270,6 +275,7 @@ export function RecipeListPanel() {
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
 
       {/* 레시피 카드 그리드 */}
