@@ -25,6 +25,7 @@ interface PackStore {
   // Pack! 버튼으로 확정된 Pack (홈 체크리스트)
   committedItems: PackItem[]
   commit: () => void
+  commitMerged: (items: PackItem[]) => void
   clearCommitted: () => void
   removeCommitted: (gearId: string) => void
 }
@@ -81,6 +82,7 @@ export const usePackStore = create<PackStore>()(
       // 현재 items를 홈 체크리스트에 확정
       committedItems: [],
       commit: () => set((s) => ({ committedItems: [...s.items] })),
+      commitMerged: (items) => set({ committedItems: items }),
       clearCommitted: () => set({ committedItems: [] }),
       removeCommitted: (gearId) =>
         set((s) => ({ committedItems: s.committedItems.filter((i) => i.gearId !== gearId) })),

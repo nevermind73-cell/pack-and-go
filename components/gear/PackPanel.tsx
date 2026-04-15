@@ -65,15 +65,29 @@ export function PackPanel() {
       toast.error('Pack에 장비가 없습니다.')
       return
     }
-    packStore.commit()
+
+    // 기존 홈 체크리스트와 중복 없이 병합
+    const existingItems: typeof packStore.items = currentTrip
+      ? (Array.isArray(currentTrip.pack_items) ? currentTrip.pack_items : [])
+      : packStore.committedItems
+
+    const existingIds = new Set(existingItems.map((i) => i.gearId))
+    const newItems = packStore.items.filter((i) => !existingIds.has(i.gearId))
+    const merged = [...existingItems, ...newItems]
+
+    // 로컬 store 먼저 반영 (항상 동작)
+    packStore.commitMerged(merged)
+
+    // DB 여행이 있으면 저장 시도
     if (currentTrip) {
       try {
-        await updateTrip.mutateAsync({ id: currentTrip.id, pack_items: packStore.items })
+        await updateTrip.mutateAsync({ id: currentTrip.id, pack_items: merged })
       } catch {
         toast.error('서버 저장 실패 — 로컬에만 반영됩니다')
       }
     }
-    toast.success(`${packStore.items.length}개 장비가 홈 체크리스트에 반영되었습니다.`)
+
+    toast.success(`${newItems.length > 0 ? `${newItems.length}개 추가` : '이미 모두 등록됨'} — 홈 체크리스트에 반영되었습니다.`)
   }
 
   return (

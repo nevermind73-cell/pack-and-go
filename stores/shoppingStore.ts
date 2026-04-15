@@ -13,6 +13,7 @@ interface ShoppingStore {
   // 홈에 실제 반영된 목록 (쇼핑 리스트에 추가 버튼 클릭 시 저장)
   committedRecipeIds: string[]
   commit: () => void
+  commitMerged: (ids: string[]) => void
   isCommitted: (id: string) => boolean
   removeCommitted: (id: string) => void
 }
@@ -37,6 +38,7 @@ export const useShoppingStore = create<ShoppingStore>()(
 
       commit: () =>
         set((s) => ({ committedRecipeIds: [...s.selectedRecipeIds] })),
+      commitMerged: (ids) => set({ committedRecipeIds: ids }),
 
       isCommitted: (id) => get().committedRecipeIds.includes(id),
       removeCommitted: (id) =>

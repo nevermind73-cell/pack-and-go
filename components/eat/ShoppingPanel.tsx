@@ -31,19 +31,30 @@ export function ShoppingPanel() {
       toast.error('레시피를 선택해주세요.')
       return
     }
-    shoppingStore.commit()
+
+    // 기존 홈 체크리스트와 중복 없이 병합
+    const existingIds: string[] = currentTrip
+      ? (Array.isArray(currentTrip.shopping_recipe_ids) ? currentTrip.shopping_recipe_ids : [])
+      : shoppingStore.committedRecipeIds
+
+    const existingSet = new Set(existingIds)
+    const newIds = shoppingStore.selectedRecipeIds.filter((id) => !existingSet.has(id))
+    const merged = [...existingIds, ...newIds]
+
+    // 로컬 store 먼저 반영
+    shoppingStore.commitMerged(merged)
+
+    // DB 여행이 있으면 저장 시도
     if (currentTrip) {
       try {
-        await updateTrip.mutateAsync({
-          id: currentTrip.id,
-          shopping_recipe_ids: shoppingStore.selectedRecipeIds,
-        })
+        await updateTrip.mutateAsync({ id: currentTrip.id, shopping_recipe_ids: merged })
       } catch {
         toast.error('서버 저장 실패 — 로컬에만 반영됩니다')
       }
     }
+
     const total = selectedRecipes.reduce((sum, r) => sum + (r.ingredients?.length ?? 0), 0)
-    toast.success(`${selectedRecipes.length}개 레시피, ${total}개 재료가 홈 체크리스트에 반영되었습니다.`)
+    toast.success(`${newIds.length > 0 ? `${newIds.length}개 추가` : '이미 모두 등록됨'} — 홈 체크리스트에 반영되었습니다.`)
   }
 
   return (
