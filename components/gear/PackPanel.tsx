@@ -49,15 +49,15 @@ export function PackPanel() {
   // 통계
   const totalCount = packWithGear.reduce((sum, i) => sum + i.quantity, 0)
   const totalWeightG = packWithGear.reduce(
-    (sum, i) => sum + (i.gear.weight_g ?? 0) * i.quantity,
+    (sum, i) => sum + Number(i.gear.weight_g ?? 0) * i.quantity,
     0
   )
   const wornWeightG = packWithGear
     .filter((i) => i.isWorn)
-    .reduce((sum, i) => sum + (i.gear.weight_g ?? 0) * i.quantity, 0)
+    .reduce((sum, i) => sum + Number(i.gear.weight_g ?? 0) * i.quantity, 0)
   const consumableWeightG = packWithGear
     .filter((i) => i.isConsumable)
-    .reduce((sum, i) => sum + (i.gear.weight_g ?? 0) * i.quantity, 0)
+    .reduce((sum, i) => sum + Number(i.gear.weight_g ?? 0) * i.quantity, 0)
   const baseWeightG = totalWeightG - wornWeightG - consumableWeightG
 
   async function handlePack() {
@@ -146,7 +146,7 @@ export function PackPanel() {
         ) : (
           Array.from(grouped.entries()).map(([category, items]) => {
             const categoryWeightG = items.reduce(
-              (sum, i) => sum + (i.gear.weight_g ?? 0) * i.quantity,
+              (sum, i) => sum + Number(i.gear.weight_g ?? 0) * i.quantity,
               0
             )
             return (
@@ -194,7 +194,7 @@ export function PackPanel() {
                   {/* 무게 */}
                   <span className="text-xs text-muted-foreground w-14 text-right shrink-0">
                     {item.gear.weight_g
-                      ? `${item.gear.weight_g * item.quantity}g`
+                      ? `${Number(item.gear.weight_g) * item.quantity}g`
                       : '—'}
                   </span>
 
