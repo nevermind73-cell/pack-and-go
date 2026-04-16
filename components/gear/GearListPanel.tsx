@@ -350,8 +350,10 @@ export function GearListPanel() {
               const totalWeightG = group.gear_group_items.reduce(
                 (sum, i) => sum + Number(i.gear?.weight_g ?? 0), 0
               )
+              const count = group.gear_group_items.length
               return (
                 <div key={group.id} className="border rounded-lg p-3">
+                  {/* 1행: 리스트명 (N개) + 버튼 */}
                   <div className="flex items-center justify-between gap-2">
                     <button
                       className="flex-1 min-w-0 text-left"
@@ -362,14 +364,8 @@ export function GearListPanel() {
                         {group.is_favorite && (
                           <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400 shrink-0" />
                         )}
-                        <span className="text-xs text-muted-foreground">
-                          {totalWeightG > 0 ? formatWeight(totalWeightG) : `${group.gear_group_items.length}개`}
-                        </span>
+                        <span className="text-xs text-muted-foreground">({count}개)</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                        {group.gear_group_items.slice(0, 4).map((i) => i.gear?.name).filter(Boolean).join(', ')}
-                        {group.gear_group_items.length > 4 && ' ...'}
-                      </p>
                     </button>
                     <div className="flex gap-1 shrink-0">
                       <Button
@@ -393,6 +389,13 @@ export function GearListPanel() {
                         <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </div>
+                  </div>
+                  {/* 2행: 무게 요약 */}
+                  <div className="flex gap-3 mt-1.5 text-xs text-muted-foreground">
+                    <span>총합 <span className="text-foreground font-medium">{totalWeightG > 0 ? formatWeight(totalWeightG) : '—'}</span></span>
+                    <span>착용 <span className="text-foreground font-medium">—</span></span>
+                    <span>소모 <span className="text-foreground font-medium">—</span></span>
+                    <span>기본 <span className="text-foreground font-medium">{totalWeightG > 0 ? formatWeight(totalWeightG) : '—'}</span></span>
                   </div>
                 </div>
               )
