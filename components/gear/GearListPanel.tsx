@@ -390,13 +390,12 @@ export function GearListPanel() {
                       </Button>
                     </div>
                   </div>
-                  {/* 2행: 무게 요약 */}
-                  <div className="flex gap-3 mt-1.5 text-xs text-muted-foreground">
-                    <span>총합 <span className="text-foreground font-medium">{totalWeightG > 0 ? formatWeight(totalWeightG) : '—'}</span></span>
-                    <span>착용 <span className="text-foreground font-medium">—</span></span>
-                    <span>소모 <span className="text-foreground font-medium">—</span></span>
-                    <span>기본 <span className="text-foreground font-medium">{totalWeightG > 0 ? formatWeight(totalWeightG) : '—'}</span></span>
-                  </div>
+                  {/* 2행: 무게 */}
+                  {totalWeightG > 0 && (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {formatWeight(totalWeightG)}
+                    </div>
+                  )}
                 </div>
               )
             })
