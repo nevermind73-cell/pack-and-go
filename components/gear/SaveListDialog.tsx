@@ -42,8 +42,8 @@ export function SaveListDialog({ open, onOpenChange, packItems }: SaveListDialog
       toast.success(`"${name.trim()}" 리스트가 저장되었습니다.`)
       setName('')
       onOpenChange(false)
-    } catch {
-      toast.error('저장에 실패했습니다.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '저장에 실패했습니다.')
     }
   }
 
