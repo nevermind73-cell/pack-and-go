@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Bookmark, Shirt, Utensils, X, Plus, Minus, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { usePackStore } from '@/stores/packStore'
+import type { PackItem } from '@/stores/packStore'
 import { useGear } from '@/hooks/useGear'
 import { SaveListDialog } from './SaveListDialog'
 import { useCurrentTrip, useUpdateTrip } from '@/hooks/useTrips'
@@ -17,9 +18,38 @@ function formatKg(g: number): string {
 export function PackPanel() {
   const packStore = usePackStore()
   const { data: gearList } = useGear()
-  const { data: currentTrip } = useCurrentTrip()
+  const { data: currentTrip, isSuccess: tripLoaded } = useCurrentTrip()
   const updateTrip = useUpdateTrip()
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+
+  // 여행이 있으면 서버 pack_draft로 초기화 (최초 1회)
+  const initializedRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!tripLoaded) return
+    if (!currentTrip) return
+    if (initializedRef.current === currentTrip.id) return
+    initializedRef.current = currentTrip.id
+    const serverDraft: PackItem[] = Array.isArray(currentTrip.pack_draft)
+      ? currentTrip.pack_draft
+      : []
+    packStore.setItems(serverDraft)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripLoaded, currentTrip?.id])
+
+  // 여행이 있을 때 items 변경 시 서버에 자동 저장 (디바운스 1s)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!currentTrip) return
+    if (initializedRef.current !== currentTrip.id) return
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => {
+      updateTrip.mutate({ id: currentTrip.id, pack_draft: packStore.items })
+    }, 1000)
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [packStore.items])
 
   const safeGearList = Array.isArray(gearList) ? gearList : []
   const gearMap = useMemo(

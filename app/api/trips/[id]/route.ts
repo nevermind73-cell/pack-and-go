@@ -10,12 +10,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params
   const body = await request.json()
-  const { status, todos, title, start_date, end_date, sites, pack_items, shopping_recipe_ids } = body
+  const { status, todos, title, start_date, end_date, sites, pack_items, pack_draft, shopping_recipe_ids } = body
 
   // 본인 여행인지 확인
   const { data: existing } = await supabase
     .from('trips')
-    .select('id, pack_items, shopping_recipe_ids, start_date')
+    .select('id, pack_items, pack_draft, shopping_recipe_ids, start_date')
     .eq('id', id)
     .eq('user_id', user.id)
     .maybeSingle()
@@ -29,6 +29,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (start_date !== undefined) updates.start_date = start_date
   if (end_date !== undefined) updates.end_date = end_date || null
   if (pack_items !== undefined) updates.pack_items = pack_items
+  if (pack_draft !== undefined) updates.pack_draft = pack_draft
   if (shopping_recipe_ids !== undefined) updates.shopping_recipe_ids = shopping_recipe_ids
 
   const { data, error } = await supabase

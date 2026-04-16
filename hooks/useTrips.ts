@@ -34,6 +34,7 @@ export interface Trip {
   status: 'planned' | 'done'
   todos: TodoItem[]
   pack_items: PackItem[]
+  pack_draft: PackItem[]
   shopping_recipe_ids: string[]
   created_at: string
   trip_sites: TripSiteEntry[]
@@ -85,6 +86,7 @@ export interface UpdateTripInput {
   end_date?: string
   sites?: { site_id: string; start_date: string; end_date?: string }[]
   pack_items?: PackItem[]
+  pack_draft?: PackItem[]
   shopping_recipe_ids?: string[]
 }
 

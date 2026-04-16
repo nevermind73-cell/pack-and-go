@@ -22,6 +22,9 @@ interface PackStore {
   hasItem: (gearId: string) => boolean
   loadItems: (gearIds: string[]) => void
 
+  // 아이템 전체 교체 (서버 초기화용)
+  setItems: (items: PackItem[]) => void
+
   // Pack! 버튼으로 확정된 Pack (홈 체크리스트)
   committedItems: PackItem[]
   commit: () => void
@@ -70,6 +73,8 @@ export const usePackStore = create<PackStore>()(
       clear: () => set({ items: [] }),
 
       hasItem: (gearId) => get().items.some((i) => i.gearId === gearId),
+
+      setItems: (items) => set({ items }),
 
       loadItems: (gearIds) => {
         const existing = new Set(get().items.map((i) => i.gearId))
