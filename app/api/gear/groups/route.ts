@@ -11,7 +11,7 @@ export async function GET() {
       *,
       gear_group_items (
         gear_id,
-        gear (id, name, category, memo)
+        gear (id, name, category, gear_type, weight_g, memo)
       )
     `)
     .eq('user_id', user.id)

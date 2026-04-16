@@ -8,6 +8,12 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -22,9 +28,109 @@ import {
   useDeleteGearGroup,
   useAddGearToGroup,
   useRemoveGearFromGroup,
+  type GearGroup,
 } from '@/hooks/useGear'
 import { Skeleton } from '@/components/ui/skeleton'
 
+function formatWeight(g: number): string {
+  return g >= 1000 ? `${(g / 1000).toFixed(2)} kg` : `${g} g`
+}
+
+function groupTotalWeight(group: GearGroup): number {
+  return group.gear_group_items.reduce(
+    (sum, i) => sum + Number(i.gear?.weight_g ?? 0),
+    0
+  )
+}
+
+// ── 그룹 상세 팝업 ─────────────────────────────────────
+function GroupDetailDialog({
+  group,
+  open,
+  onOpenChange,
+}: {
+  group: GearGroup
+  open: boolean
+  onOpenChange: (v: boolean) => void
+}) {
+  const items = group.gear_group_items
+  const totalWeightG = groupTotalWeight(group)
+
+  // 카테고리별 그룹화
+  const categoryMap = new Map<string, typeof items>()
+  for (const item of items) {
+    const cat = item.gear?.category ?? '기타'
+    if (!categoryMap.has(cat)) categoryMap.set(cat, [])
+    categoryMap.get(cat)!.push(item)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {group.name}
+            {group.is_favorite && (
+              <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+            )}
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* 요약 */}
+        <div className="flex items-center gap-3 text-sm border rounded-lg px-3 py-2 bg-muted/30">
+          <span className="text-muted-foreground">장비</span>
+          <span className="font-medium">{items.length}개</span>
+          <span className="text-muted-foreground">총 무게</span>
+          <span className="font-medium">{totalWeightG > 0 ? formatWeight(totalWeightG) : '—'}</span>
+        </div>
+
+        {/* 장비 목록 */}
+        <div className="overflow-y-auto max-h-[50vh] -mx-1">
+          {items.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">장비가 없습니다.</p>
+          ) : (
+            Array.from(categoryMap.entries()).map(([category, catItems]) => {
+              const catWeight = catItems.reduce(
+                (sum, i) => sum + Number(i.gear?.weight_g ?? 0),
+                0
+              )
+              return (
+                <div key={category}>
+                  <div className="px-3 pt-3 pb-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        {category}
+                      </span>
+                      {catWeight > 0 && (
+                        <span className="text-xs text-muted-foreground">{formatWeight(catWeight)}</span>
+                      )}
+                    </div>
+                    <div className="border-b mt-1" />
+                  </div>
+                  {catItems.map((item) => (
+                    <div
+                      key={item.gear_id}
+                      className="flex items-center justify-between px-3 py-1.5"
+                    >
+                      <span className="text-sm">{item.gear?.name ?? item.gear_id}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {Number(item.gear?.weight_g ?? 0) > 0
+                          ? formatWeight(Number(item.gear.weight_g))
+                          : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )
+            })
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ── 메인 ──────────────────────────────────────────────
 export function GearGroupManager() {
   const { data: gearList } = useGear()
   const { data: groups, isLoading } = useGearGroups()
@@ -36,6 +142,7 @@ export function GearGroupManager() {
 
   const [newGroupName, setNewGroupName] = useState('')
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [detailGroup, setDetailGroup] = useState<GearGroup | null>(null)
 
   function toggleExpand(id: string) {
     setExpandedGroups((prev) => {
@@ -122,16 +229,17 @@ export function GearGroupManager() {
           {groups.map((group) => {
             const isExpanded = expandedGroups.has(group.id)
             const groupGearIds = new Set(group.gear_group_items.map((i) => i.gear_id))
+            const totalWeightG = groupTotalWeight(group)
 
             return (
               <Card key={group.id}>
                 <CardHeader className="py-3 px-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6"
+                        className="h-6 w-6 shrink-0"
                         onClick={() => toggleExpand(group.id)}
                       >
                         {isExpanded ? (
@@ -140,13 +248,19 @@ export function GearGroupManager() {
                           <ChevronRight className="h-4 w-4" />
                         )}
                       </Button>
-                      <CardTitle className="text-sm font-medium">{group.name}</CardTitle>
-                      {group.is_favorite && (
-                        <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                      )}
-                      <Badge variant="outline" className="text-xs">
-                        {group.gear_group_items.length}개
-                      </Badge>
+                      {/* 클릭하면 상세 팝업 */}
+                      <button
+                        className="flex items-center gap-2 flex-1 min-w-0 text-left hover:opacity-70 transition-opacity"
+                        onClick={() => setDetailGroup(group)}
+                      >
+                        <CardTitle className="text-sm font-medium truncate">{group.name}</CardTitle>
+                        {group.is_favorite && (
+                          <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400 shrink-0" />
+                        )}
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {totalWeightG > 0 ? formatWeight(totalWeightG) : `${group.gear_group_items.length}개`}
+                        </span>
+                      </button>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent">
@@ -192,11 +306,11 @@ export function GearGroupManager() {
                                   handleToggleGearInGroup(group.id, gear.id, isInGroup)
                                 }
                               />
-                              <span className="text-sm">{gear.name}</span>
-                              {gear.category && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {gear.category}
-                                </Badge>
+                              <span className="text-sm flex-1">{gear.name}</span>
+                              {gear.weight_g > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatWeight(Number(gear.weight_g))}
+                                </span>
                               )}
                             </label>
                           )
@@ -209,6 +323,15 @@ export function GearGroupManager() {
             )
           })}
         </div>
+      )}
+
+      {/* 상세 팝업 */}
+      {detailGroup && (
+        <GroupDetailDialog
+          group={detailGroup}
+          open={!!detailGroup}
+          onOpenChange={(v) => { if (!v) setDetailGroup(null) }}
+        />
       )}
     </div>
   )
