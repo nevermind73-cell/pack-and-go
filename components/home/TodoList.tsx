@@ -98,7 +98,7 @@ export function TodoList({ trip }: TodoListProps) {
       </div>
 
       {/* 내용 */}
-      <div className="flex-1 overflow-y-auto max-h-72">
+      <div className="flex-1 overflow-y-auto max-h-[460px]">
         {todos.length === 0 && !isAdding && (
           <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
             + 버튼으로 할일을 추가하세요

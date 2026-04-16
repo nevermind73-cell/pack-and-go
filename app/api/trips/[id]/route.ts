@@ -1,7 +1,8 @@
-import { createServerClient } from '@/lib/supabase/server'
+import { createServerClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { fetchWeatherForDate } from '@/lib/weather'
 
-// PATCH /api/trips/[id] → 여행 업데이트 (status, todos)
+// PATCH /api/trips/[id] → 여행 업데이트 (status, todos 등)
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -14,7 +15,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   // 본인 여행인지 확인
   const { data: existing } = await supabase
     .from('trips')
-    .select('id')
+    .select('id, pack_items, shopping_recipe_ids, start_date')
     .eq('id', id)
     .eq('user_id', user.id)
     .maybeSingle()
@@ -57,11 +58,59 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
   }
 
-  // 완료 처리 시 diary 자동 생성
+  // 완료 처리 시 부가 작업
   if (status === 'done') {
-    await supabase
+    const service = createServiceClient()
+
+    // 1. 장비 사용 횟수 +1
+    const currentPackItems = (pack_items ?? existing.pack_items ?? []) as Array<{ gearId: string }>
+    const gearIds = currentPackItems.map((i) => i.gearId).filter(Boolean)
+    if (gearIds.length > 0) {
+      await service.rpc('increment_gear_use_count', { gear_ids: gearIds })
+    }
+
+    // 2. 캠핑장 방문 횟수 +1
+    const { data: tripSites } = await supabase
+      .from('trip_sites')
+      .select('site_id, start_date, site:sites(id, name, lat, lng)')
+      .eq('trip_id', id)
+
+    const siteIds = (tripSites ?? []).map((ts) => ts.site_id).filter(Boolean)
+    if (siteIds.length > 0) {
+      await service.rpc('increment_site_visit_count', { site_ids: siteIds })
+    }
+
+    // 3. diary 생성 (trip_id 충돌 시 무시)
+    const { error: diaryError } = await supabase
       .from('diary')
-      .upsert({ user_id: user.id, trip_id: id, content: '', photos: [] })
+      .upsert(
+        { user_id: user.id, trip_id: id, content: '', photos: [] },
+        { onConflict: 'trip_id', ignoreDuplicates: false }
+      )
+
+    // 4. 날씨 스냅샷 저장 (migration_diary_v2.sql 실행 후 활성화됨)
+    if (!diaryError) {
+      const tripStartDate = start_date ?? existing.start_date
+      const weatherSnapshots = await Promise.all(
+        (tripSites ?? []).map(async (ts) => {
+          const site = ts.site as unknown as { id: string; name: string; lat: number | null; lng: number | null } | null
+          if (!site?.lat || !site?.lng) return null
+          const date = ts.start_date ?? tripStartDate
+          const weather = await fetchWeatherForDate(site.lat, site.lng, date)
+          if (!weather) return null
+          return { site_id: site.id, site_name: site.name, ...weather }
+        })
+      )
+      const validSnapshots = weatherSnapshots.filter(Boolean)
+      if (validSnapshots.length > 0) {
+        // weather_snapshot 컬럼이 없으면 이 update는 조용히 실패함 (정상)
+        await supabase
+          .from('diary')
+          .update({ weather_snapshot: validSnapshots })
+          .eq('trip_id', id)
+          .eq('user_id', user.id)
+      }
+    }
   }
 
   return NextResponse.json(data)

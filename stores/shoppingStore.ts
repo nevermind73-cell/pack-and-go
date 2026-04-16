@@ -14,6 +14,7 @@ interface ShoppingStore {
   committedRecipeIds: string[]
   commit: () => void
   commitMerged: (ids: string[]) => void
+  clearCommitted: () => void
   isCommitted: (id: string) => boolean
   removeCommitted: (id: string) => void
 }
@@ -39,6 +40,7 @@ export const useShoppingStore = create<ShoppingStore>()(
       commit: () =>
         set((s) => ({ committedRecipeIds: [...s.selectedRecipeIds] })),
       commitMerged: (ids) => set({ committedRecipeIds: ids }),
+      clearCommitted: () => set({ committedRecipeIds: [] }),
 
       isCommitted: (id) => get().committedRecipeIds.includes(id),
       removeCommitted: (id) =>

@@ -73,7 +73,7 @@ export function PackChecklist() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto max-h-72">
+      <div className="flex-1 overflow-y-auto max-h-[460px]">
         {packWithGear.length === 0 ? (
           <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
             Gear 페이지에서 Pack it! 으로 추가하세요

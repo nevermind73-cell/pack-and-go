@@ -220,10 +220,10 @@ export function RecipeListPanel() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* 툴바 */}
-      <div className="flex flex-col gap-2 p-3 border-b shrink-0">
-        {/* 1행: 추가 버튼 + 검색 */}
-        <div className="flex gap-2">
+      {/* 툴바: md 이상 1행, md 미만 2행 */}
+      <div className="flex flex-col md:flex-row gap-2 p-3 border-b shrink-0">
+        {/* 추가 버튼 + 검색 */}
+        <div className="flex gap-2 flex-1 min-w-0">
           <Button size="sm" className="h-8 shrink-0" onClick={() => setAddDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-1.5" />
             새 레시피 추가
@@ -239,8 +239,8 @@ export function RecipeListPanel() {
           </div>
         </div>
 
-        {/* 2행: 즐겨찾기 토글 + 정렬 */}
-        <div className="flex gap-2">
+        {/* 즐겨찾기 토글 + 정렬 */}
+        <div className="flex gap-2 shrink-0">
           <div className="flex h-8 rounded-md border border-input overflow-hidden text-sm">
             <button
               onClick={() => setFavOnly(false)}
@@ -265,16 +265,16 @@ export function RecipeListPanel() {
               {SORT_LABELS[sortKey]}
               <ChevronDown className="h-3.5 w-3.5" />
             </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuRadioGroup value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
-              {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
-                <DropdownMenuRadioItem key={key} value={key}>
-                  {SORT_LABELS[key]}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <DropdownMenuContent align="end">
+              <DropdownMenuRadioGroup value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+                {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
+                  <DropdownMenuRadioItem key={key} value={key}>
+                    {SORT_LABELS[key]}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

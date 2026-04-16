@@ -95,7 +95,13 @@ export function useUpdateTrip() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['current-trip'] }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['current-trip'] })
+      if (variables.status === 'done') {
+        qc.invalidateQueries({ queryKey: ['gear'] })
+        qc.invalidateQueries({ queryKey: ['sites'] })
+      }
+    },
   })
 }
 

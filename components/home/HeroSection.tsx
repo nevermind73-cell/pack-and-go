@@ -14,6 +14,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrentTrip, useUpdateTrip, useDeleteTrip, type Trip } from '@/hooks/useTrips'
 import { useWeather } from '@/hooks/useWeather'
 import { useTripCheckStore } from '@/stores/tripStore'
+import { usePackStore } from '@/stores/packStore'
+import { useShoppingStore } from '@/stores/shoppingStore'
 import { NewTripDialog } from './NewTripDialog'
 import { EditTripDialog } from './EditTripDialog'
 
@@ -120,12 +122,22 @@ function TripHero({ trip, onNewTrip, onEdit }: { trip: Trip; onNewTrip: () => vo
   const updateTrip = useUpdateTrip()
   const deleteTrip = useDeleteTrip()
   const { clearGearChecks, clearIngredientChecks } = useTripCheckStore()
+  const { clear: clearPack, clearCommitted: clearPackCommitted } = usePackStore()
+  const { clear: clearShopping, clearCommitted: clearShoppingCommitted } = useShoppingStore()
+
+  function clearLocalState() {
+    clearGearChecks()
+    clearIngredientChecks()
+    clearPack()
+    clearPackCommitted()
+    clearShopping()
+    clearShoppingCommitted()
+  }
 
   async function handleComplete() {
     try {
       await updateTrip.mutateAsync({ id: trip.id, status: 'done' })
-      clearGearChecks()
-      clearIngredientChecks()
+      clearLocalState()
       toast.success('캠핑 완료! 다이어리에 기록되었습니다.')
     } catch {
       toast.error('완료 처리 실패')
@@ -136,8 +148,7 @@ function TripHero({ trip, onNewTrip, onEdit }: { trip: Trip; onNewTrip: () => vo
     if (!confirm('캠핑을 취소하시겠습니까? 등록된 데이터가 삭제됩니다.')) return
     try {
       await deleteTrip.mutateAsync(trip.id)
-      clearGearChecks()
-      clearIngredientChecks()
+      clearLocalState()
       toast.success('캠핑이 취소되었습니다.')
     } catch {
       toast.error('취소 처리 실패')
@@ -170,23 +181,33 @@ function TripHero({ trip, onNewTrip, onEdit }: { trip: Trip; onNewTrip: () => vo
             새 캠핑 등록
           </Button>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center gap-1 rounded-md bg-white/20 text-white border border-white/30 hover:bg-white/30 text-xs px-3 h-8 font-medium transition-colors">
+          {/* 스플릿 버튼: 왼쪽=즉시 완료, 오른쪽=드롭다운(취소) */}
+          <div className="flex items-center rounded-md overflow-hidden border border-white/30">
+            <button
+              onClick={handleComplete}
+              disabled={updateTrip.isPending}
+              className="h-8 px-3 text-xs font-medium bg-white/20 text-white hover:bg-white/30 transition-colors disabled:opacity-50"
+            >
               완료
-              <ChevronDown className="h-3.5 w-3.5" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleComplete}>
-                ✅ 완료 — 다이어리에 기록
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={handleCancel}
+            </button>
+            <div className="w-px h-4 bg-white/30" />
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                disabled={updateTrip.isPending}
+                className="h-8 px-1.5 bg-white/20 text-white hover:bg-white/30 transition-colors disabled:opacity-50 flex items-center"
               >
-                ❌ 취소 — 데이터 초기화
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <ChevronDown className="h-3.5 w-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={handleCancel}
+                >
+                  ❌ 취소 — 데이터 초기화
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
