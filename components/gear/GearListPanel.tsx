@@ -18,8 +18,13 @@ import { toast } from 'sonner'
 import { Plus, Search, ChevronDown, ChevronRight, Trash2, Download, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { GearRow } from './GearRow'
 import { GearFormDialog } from './GearFormDialog'
 import { GearDetailDialog } from './GearDetailDialog'
@@ -29,11 +34,96 @@ import {
   useReorderGear,
   useDeleteGearGroup,
   type Gear,
+  type GearGroup,
 } from '@/hooks/useGear'
 import { usePackStore } from '@/stores/packStore'
 
 type Tab = 'my' | 'list'
 
+function formatWeight(g: number): string {
+  return g >= 1000 ? `${(g / 1000).toFixed(2)} kg` : `${g} g`
+}
+
+// ── 그룹 상세 팝업 ────────────────────────────────────
+function GroupDetailDialog({
+  group,
+  open,
+  onOpenChange,
+}: {
+  group: GearGroup
+  open: boolean
+  onOpenChange: (v: boolean) => void
+}) {
+  const items = group.gear_group_items
+  const totalWeightG = items.reduce((sum, i) => sum + Number(i.gear?.weight_g ?? 0), 0)
+
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, typeof items>()
+    for (const item of items) {
+      const cat = item.gear?.category ?? '기타'
+      if (!map.has(cat)) map.set(cat, [])
+      map.get(cat)!.push(item)
+    }
+    return map
+  }, [items])
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {group.name}
+            {group.is_favorite && (
+              <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+            )}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex items-center gap-3 text-sm border rounded-lg px-3 py-2 bg-muted/30">
+          <span className="text-muted-foreground">장비</span>
+          <span className="font-medium">{items.length}개</span>
+          <span className="text-muted-foreground">총 무게</span>
+          <span className="font-medium">{totalWeightG > 0 ? formatWeight(totalWeightG) : '—'}</span>
+        </div>
+
+        <div className="overflow-y-auto max-h-[50vh]">
+          {items.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">장비가 없습니다.</p>
+          ) : (
+            Array.from(categoryMap.entries()).map(([category, catItems]) => {
+              const catWeight = catItems.reduce((sum, i) => sum + Number(i.gear?.weight_g ?? 0), 0)
+              return (
+                <div key={category}>
+                  <div className="pt-3 pb-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        {category}
+                      </span>
+                      {catWeight > 0 && (
+                        <span className="text-xs text-muted-foreground">{formatWeight(catWeight)}</span>
+                      )}
+                    </div>
+                    <div className="border-b mt-1" />
+                  </div>
+                  {catItems.map((item) => (
+                    <div key={item.gear_id} className="flex items-center justify-between py-1.5">
+                      <span className="text-sm">{item.gear?.name ?? item.gear_id}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {Number(item.gear?.weight_g ?? 0) > 0 ? formatWeight(Number(item.gear!.weight_g)) : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )
+            })
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ── 메인 ─────────────────────────────────────────────
 export function GearListPanel() {
   const { data: gearList, isLoading: gearLoading } = useGear()
   const { data: groups, isLoading: groupsLoading } = useGearGroups()
@@ -49,8 +139,7 @@ export function GearListPanel() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [detailTarget, setDetailTarget] = useState<Gear | undefined>()
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
-
-  // 로컬 순서 상태 (DnD 낙관적 업데이트)
+  const [groupDetail, setGroupDetail] = useState<GearGroup | null>(null)
   const [localOrder, setLocalOrder] = useState<string[] | null>(null)
 
   const sensors = useSensors(
@@ -60,12 +149,10 @@ export function GearListPanel() {
   const safeGearList = Array.isArray(gearList) ? gearList : []
   const safeGroups = Array.isArray(groups) ? groups : []
 
-  // 정렬 + 검색 적용된 gear 목록
   const filteredGear = useMemo(() => {
     let list = localOrder
       ? [
           ...localOrder.map((id) => safeGearList.find((g) => g.id === id)).filter(Boolean) as Gear[],
-          // localOrder에 없는 새 아이템을 끝에 추가
           ...safeGearList.filter((g) => !localOrder.includes(g.id)),
         ]
       : [...safeGearList].sort((a, b) => {
@@ -85,7 +172,6 @@ export function GearListPanel() {
     return list
   }, [safeGearList, localOrder, search])
 
-  // 카테고리별 그룹화
   const grouped = useMemo(() => {
     const map = new Map<string, Gear[]>()
     for (const gear of filteredGear) {
@@ -96,9 +182,7 @@ export function GearListPanel() {
     return map
   }, [filteredGear])
 
-  // 카테고리 accordion 초기 상태: 모두 열림
   function isCategoryOpen(cat: string) {
-    // expandedCategories가 비어있으면 모두 열린 상태
     return !expandedCategories.has(cat)
   }
 
@@ -119,24 +203,16 @@ export function GearListPanel() {
     if (oldIndex === -1 || newIndex === -1) return
 
     const reordered = arrayMove(categoryItems, oldIndex, newIndex)
-
-    // 전체 목록에서 이 카테고리 아이템들의 sort_order를 업데이트
     const allIds = filteredGear.map((g) => g.id)
     const catIds = new Set(categoryItems.map((g) => g.id))
     const newAllIds = allIds.filter((id) => !catIds.has(id))
-
-    // 기존 위치에 reordered 삽입
     const firstCatIndex = allIds.findIndex((id) => catIds.has(id))
     newAllIds.splice(firstCatIndex, 0, ...reordered.map((g) => g.id))
 
     setLocalOrder(newAllIds)
-
     const updates = newAllIds.map((id, idx) => ({ id, sort_order: idx }))
     reorderGear.mutate(updates, {
-      onError: () => {
-        setLocalOrder(null)
-        toast.error('순서 저장에 실패했습니다.')
-      },
+      onError: () => { setLocalOrder(null); toast.error('순서 저장에 실패했습니다.') },
       onSuccess: () => setLocalOrder(null),
     })
   }
@@ -215,7 +291,6 @@ export function GearListPanel() {
             ) : (
               Array.from(grouped.entries()).map(([category, items]) => (
                 <div key={category}>
-                  {/* 카테고리 헤더 */}
                   <button
                     onClick={() => toggleCategory(category)}
                     className="w-full flex items-center justify-between px-4 py-2.5 bg-muted/30 hover:bg-muted/50 transition-colors"
@@ -231,17 +306,13 @@ export function GearListPanel() {
                     </div>
                   </button>
 
-                  {/* 카테고리 아이템 */}
                   {isCategoryOpen(category) && (
                     <DndContext
                       sensors={sensors}
                       collisionDetection={closestCenter}
                       onDragEnd={(e) => handleDragEnd(e, items)}
                     >
-                      <SortableContext
-                        items={items.map((g) => g.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
+                      <SortableContext items={items.map((g) => g.id)} strategy={verticalListSortingStrategy}>
                         <div className="py-1">
                           {items.map((gear) => (
                             <GearRow
@@ -267,7 +338,7 @@ export function GearListPanel() {
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {groupsLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full" />
+              <Skeleton key={i} className="h-16 w-full" />
             ))
           ) : safeGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground text-sm">
@@ -275,55 +346,68 @@ export function GearListPanel() {
               <p className="text-xs mt-1">Pack을 구성하고 리스트로 저장해보세요.</p>
             </div>
           ) : (
-            safeGroups.map((group) => (
-              <div key={group.id} className="border rounded-lg p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-medium text-sm">{group.name}</span>
-                      {group.is_favorite && (
-                        <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400 shrink-0" />
-                      )}
-                      <Badge variant="outline" className="text-xs">
-                        {group.gear_group_items.length}개
-                      </Badge>
+            safeGroups.map((group) => {
+              const totalWeightG = group.gear_group_items.reduce(
+                (sum, i) => sum + Number(i.gear?.weight_g ?? 0), 0
+              )
+              return (
+                <div key={group.id} className="border rounded-lg p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      className="flex-1 min-w-0 text-left"
+                      onClick={() => setGroupDetail(group)}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-sm">{group.name}</span>
+                        {group.is_favorite && (
+                          <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400 shrink-0" />
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {totalWeightG > 0 ? formatWeight(totalWeightG) : `${group.gear_group_items.length}개`}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {group.gear_group_items.slice(0, 4).map((i) => i.gear?.name).filter(Boolean).join(', ')}
+                        {group.gear_group_items.length > 4 && ' ...'}
+                      </p>
+                    </button>
+                    <div className="flex gap-1 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          packStore.loadItems(group.gear_group_items.map((i) => i.gear_id))
+                          toast.success(`"${group.name}" 리스트를 Pack에 불러왔습니다.`)
+                        }}
+                      >
+                        <Download className="h-3.5 w-3.5 mr-1" />
+                        불러오기
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleDeleteGroup(group.id, group.name)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 truncate">
-                      {group.gear_group_items
-                        .slice(0, 4)
-                        .map((i) => i.gear?.name)
-                        .filter(Boolean)
-                        .join(', ')}
-                      {group.gear_group_items.length > 4 && ' ...'}
-                    </p>
-                  </div>
-                  <div className="flex gap-1 shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => {
-                        packStore.loadItems(group.gear_group_items.map((i) => i.gear_id))
-                        toast.success(`"${group.name}" 리스트를 Pack에 불러왔습니다.`)
-                      }}
-                    >
-                      <Download className="h-3.5 w-3.5 mr-1" />
-                      불러오기
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => handleDeleteGroup(group.id, group.name)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                    </Button>
                   </div>
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
+      )}
+
+      {/* 그룹 상세 팝업 */}
+      {groupDetail && (
+        <GroupDetailDialog
+          group={groupDetail}
+          open={!!groupDetail}
+          onOpenChange={(v) => { if (!v) setGroupDetail(null) }}
+        />
       )}
 
       {/* 장비 추가 다이얼로그 */}
