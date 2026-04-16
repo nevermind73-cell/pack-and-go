@@ -57,7 +57,7 @@ export function EatChecklist() {
           </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto max-h-[460px]">
+        <div className="flex-1 overflow-y-auto max-h-[600px]">
           {selectedRecipes.length === 0 ? (
             <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
               Eat 페이지에서 쇼핑 목록에 추가하세요
