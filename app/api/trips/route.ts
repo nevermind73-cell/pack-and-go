@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await request.json()
-  const { title, start_date, end_date, sites } = body
+  const { title, start_date, end_date, sites, pack_items, shopping_recipe_ids } = body
 
   if (!title || !start_date) {
     return NextResponse.json({ error: 'title과 start_date는 필수입니다' }, { status: 400 })
@@ -46,6 +46,8 @@ export async function POST(request: Request) {
       end_date: end_date || null,
       status: 'planned',
       todos: [],
+      pack_items: pack_items ?? [],
+      shopping_recipe_ids: shopping_recipe_ids ?? [],
     })
     .select()
     .single()

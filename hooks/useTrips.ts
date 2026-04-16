@@ -44,6 +44,8 @@ export interface CreateTripInput {
   start_date: string
   end_date?: string
   sites?: { site_id: string; start_date: string; end_date?: string }[]
+  pack_items?: PackItem[]
+  shopping_recipe_ids?: string[]
 }
 
 async function apiFetch(input: RequestInfo, init?: RequestInit) {

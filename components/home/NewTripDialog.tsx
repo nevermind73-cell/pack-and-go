@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/select'
 import { useSites, SITE_TYPES } from '@/hooks/useSites'
 import { useCreateTrip } from '@/hooks/useTrips'
+import { usePackStore } from '@/stores/packStore'
+import { useShoppingStore } from '@/stores/shoppingStore'
 
 // 박수 → 종료일 계산
 function addDays(dateStr: string, days: number): string {
@@ -69,6 +71,8 @@ interface NewTripDialogProps {
 export function NewTripDialog({ open, onOpenChange }: NewTripDialogProps) {
   const { data: allSites = [] } = useSites()
   const createTrip = useCreateTrip()
+  const { committedItems } = usePackStore()
+  const { committedRecipeIds } = useShoppingStore()
 
   const [title, setTitle] = useState('')
   const [entries, setEntries] = useState<SiteEntry[]>([newEntry()])
@@ -146,6 +150,8 @@ export function NewTripDialog({ open, onOpenChange }: NewTripDialogProps) {
           end_date: addDays(e.start_date, e.nights) || undefined,
           sort_order: i,
         })),
+        pack_items: committedItems.length > 0 ? committedItems : undefined,
+        shopping_recipe_ids: committedRecipeIds.length > 0 ? committedRecipeIds : undefined,
       })
       toast.success('새 캠핑이 등록되었습니다!')
       handleClose()
