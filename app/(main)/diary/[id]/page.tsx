@@ -10,6 +10,33 @@ import { Textarea } from '@/components/ui/textarea'
 import { useDiary, useUpdateDiary, useUploadDiaryPhoto, useDeleteDiaryPhoto, type DiaryGearItem } from '@/hooks/useDiary'
 import { useWeather } from '@/hooks/useWeather'
 
+// 이미지를 JPEG로 변환 + 리사이즈 (HEIC 포함 모든 포맷 대응)
+async function compressImage(file: File, maxPx = 1920, quality = 0.85): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width > maxPx || height > maxPx) {
+        if (width > height) { height = Math.round(height * maxPx / width); width = maxPx }
+        else { width = Math.round(width * maxPx / height); height = maxPx }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      canvas.toBlob(
+        (blob) => resolve(blob ? new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' }) : file),
+        'image/jpeg',
+        quality
+      )
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  })
+}
+
 function formatDateRange(start: string, end: string | null): string {
   const s = new Date(start)
   const fmt = (d: Date) =>
@@ -72,7 +99,8 @@ export default function DiaryDetailPage() {
 
     for (const file of files) {
       try {
-        await uploadPhoto.mutateAsync({ id, file })
+        const compressed = await compressImage(file)
+        await uploadPhoto.mutateAsync({ id, file: compressed })
       } catch (err) {
         toast.error(`업로드 실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`)
       }
@@ -232,7 +260,7 @@ export default function DiaryDetailPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,image/heic,image/heif"
               multiple
               className="hidden"
               onChange={handlePhotoUpload}
