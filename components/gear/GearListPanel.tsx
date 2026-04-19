@@ -28,6 +28,8 @@ import {
 import { GearRow } from './GearRow'
 import { GearFormDialog } from './GearFormDialog'
 import { GearDetailDialog } from './GearDetailDialog'
+import { WishlistFormDialog } from './WishlistFormDialog'
+import { WishlistDetailDialog } from './WishlistDetailDialog'
 import {
   useGear,
   useGearGroups,
@@ -36,12 +38,17 @@ import {
   type Gear,
   type GearGroup,
 } from '@/hooks/useGear'
+import { useWishlist, useDeleteWishlistItem, type WishlistItem } from '@/hooks/useWishlist'
 import { usePackStore } from '@/stores/packStore'
 
-type Tab = 'my' | 'list'
+type Tab = 'my' | 'list' | 'wishlist'
 
 function formatWeight(g: number): string {
   return g >= 1000 ? `${(g / 1000).toFixed(2)} kg` : `${g} g`
+}
+
+function formatPrice(p: number): string {
+  return p.toLocaleString('ko-KR') + '원'
 }
 
 // ── 그룹 상세 팝업 ────────────────────────────────────
@@ -123,6 +130,46 @@ function GroupDetailDialog({
   )
 }
 
+// ── 위시리스트 행 ─────────────────────────────────────
+function WishlistRow({
+  item,
+  onClick,
+  onDelete,
+}: {
+  item: WishlistItem
+  onClick: () => void
+  onDelete: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <div
+      className="flex items-center gap-3 px-4 py-2 hover:bg-muted/30 cursor-pointer"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={onClick}
+    >
+      <span className="flex-1 text-sm truncate">{item.name}</span>
+      {item.manufacturer && (
+        <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[80px]">{item.manufacturer}</span>
+      )}
+      {item.price != null && (
+        <span className="text-xs text-muted-foreground shrink-0">{formatPrice(item.price)}</span>
+      )}
+      {item.weight_g != null && !hovered && (
+        <span className="text-xs text-muted-foreground shrink-0">{formatWeight(Number(item.weight_g))}</span>
+      )}
+      {hovered && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── 메인 ─────────────────────────────────────────────
 export function GearListPanel() {
   const { data: gearList, isLoading: gearLoading } = useGear()
@@ -142,12 +189,39 @@ export function GearListPanel() {
   const [groupDetail, setGroupDetail] = useState<GearGroup | null>(null)
   const [localOrder, setLocalOrder] = useState<string[] | null>(null)
 
+  // 위시리스트 상태
+  const { data: wishlist, isLoading: wishlistLoading } = useWishlist()
+  const deleteWishlistItem = useDeleteWishlistItem()
+  const [wishSearch, setWishSearch] = useState('')
+  const [wishFormOpen, setWishFormOpen] = useState(false)
+  const [wishEditTarget, setWishEditTarget] = useState<WishlistItem | undefined>()
+  const [wishDetailTarget, setWishDetailTarget] = useState<WishlistItem | null>(null)
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
 
   const safeGearList = Array.isArray(gearList) ? gearList : []
   const safeGroups = Array.isArray(groups) ? groups : []
+
+  // 위시리스트 필터 + 카테고리 그룹화
+  const wishGrouped = useMemo(() => {
+    const list = Array.isArray(wishlist) ? wishlist : []
+    const filtered = wishSearch.trim()
+      ? list.filter((i) =>
+          i.name.toLowerCase().includes(wishSearch.toLowerCase()) ||
+          i.manufacturer?.toLowerCase().includes(wishSearch.toLowerCase()) ||
+          i.category?.toLowerCase().includes(wishSearch.toLowerCase())
+        )
+      : list
+    const map = new Map<string, WishlistItem[]>()
+    for (const item of filtered) {
+      const cat = item.category ?? '기타'
+      if (!map.has(cat)) map.set(cat, [])
+      map.get(cat)!.push(item)
+    }
+    return map
+  }, [wishlist, wishSearch])
 
   const filteredGear = useMemo(() => {
     let list = localOrder
@@ -242,17 +316,17 @@ export function GearListPanel() {
     <div className="flex flex-col h-full">
       {/* 탭 */}
       <div className="flex border-b shrink-0">
-        {(['my', 'list'] as Tab[]).map((t) => (
+        {(['my', 'list', 'wishlist'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               tab === t
                 ? 'border-foreground text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            {t === 'my' ? '내 장비' : '리스트'}
+            {t === 'my' ? '내 장비' : t === 'list' ? '리스트' : '위시리스트'}
           </button>
         ))}
       </div>
@@ -403,6 +477,68 @@ export function GearListPanel() {
         </div>
       )}
 
+      {/* 위시리스트 탭 */}
+      {tab === 'wishlist' && (
+        <div className="flex flex-col flex-1 min-h-0">
+          {/* 툴바 */}
+          <div className="flex gap-2 p-3 border-b shrink-0">
+            <Button size="sm" className="h-8" onClick={() => { setWishEditTarget(undefined); setWishFormOpen(true) }}>
+              <Plus className="h-4 w-4 mr-1.5" />
+              새 장비 추가
+            </Button>
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={wishSearch}
+                onChange={(e) => setWishSearch(e.target.value)}
+                placeholder="위시리스트 검색"
+                className="pl-8 h-8 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* 목록 */}
+          <div className="flex-1 overflow-y-auto">
+            {wishlistLoading ? (
+              <div className="p-3 space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            ) : wishGrouped.size === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground text-sm">
+                <p>{wishSearch ? '검색 결과가 없습니다.' : '위시리스트가 비어있습니다.'}</p>
+              </div>
+            ) : (
+              Array.from(wishGrouped.entries()).map(([category, items]) => (
+                <div key={category}>
+                  <div className="px-4 py-2.5 bg-muted/30 text-sm font-semibold flex items-center gap-2">
+                    <span>{category}</span>
+                    <span className="text-xs font-normal text-muted-foreground">({items.length})</span>
+                  </div>
+                  {items.map((item) => (
+                    <WishlistRow
+                      key={item.id}
+                      item={item}
+                      onClick={() => setWishDetailTarget(item)}
+                      onDelete={async () => {
+                        if (!confirm(`"${item.name}"을 삭제하시겠습니까?`)) return
+                        try {
+                          await deleteWishlistItem.mutateAsync(item.id)
+                          toast.success('삭제되었습니다.')
+                        } catch (err) {
+                          toast.error(err instanceof Error ? err.message : '삭제에 실패했습니다.')
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 그룹 상세 팝업 */}
       {groupDetail && (
         <GroupDetailDialog
@@ -411,6 +547,27 @@ export function GearListPanel() {
           onOpenChange={(v) => { if (!v) setGroupDetail(null) }}
         />
       )}
+
+      {/* 위시리스트 폼 */}
+      <WishlistFormDialog
+        open={wishFormOpen}
+        onOpenChange={(v) => { setWishFormOpen(v); if (!v) setWishEditTarget(undefined) }}
+        item={wishEditTarget}
+      />
+
+      {/* 위시리스트 상세 */}
+      <WishlistDetailDialog
+        item={wishDetailTarget}
+        open={!!wishDetailTarget}
+        onOpenChange={(v) => { if (!v) setWishDetailTarget(null) }}
+        onEdit={() => {
+          if (wishDetailTarget) {
+            setWishEditTarget(wishDetailTarget)
+            setWishDetailTarget(null)
+            setWishFormOpen(true)
+          }
+        }}
+      />
 
       {/* 장비 추가 다이얼로그 */}
       <GearFormDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />

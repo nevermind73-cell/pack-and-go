@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { MapPin, Navigation, ChevronDown, Plus, Thermometer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -119,13 +120,16 @@ interface HeroSectionProps {
 }
 
 function TripHero({ trip, onNewTrip, onEdit }: { trip: Trip; onNewTrip: () => void; onEdit: () => void }) {
+  const qc = useQueryClient()
   const updateTrip = useUpdateTrip()
   const deleteTrip = useDeleteTrip()
   const { clearGearChecks, clearIngredientChecks } = useTripCheckStore()
   const { clear: clearPack, clearCommitted: clearPackCommitted } = usePackStore()
   const { clear: clearShopping, clearCommitted: clearShoppingCommitted } = useShoppingStore()
 
-  function clearLocalState() {
+  function clearAllState() {
+    // 캐시 즉시 null → PackChecklist/EatChecklist가 빈 화면으로 즉시 전환
+    qc.setQueryData(['current-trip'], null)
     clearGearChecks()
     clearIngredientChecks()
     clearPack()
@@ -137,7 +141,7 @@ function TripHero({ trip, onNewTrip, onEdit }: { trip: Trip; onNewTrip: () => vo
   async function handleComplete() {
     try {
       await updateTrip.mutateAsync({ id: trip.id, status: 'done' })
-      clearLocalState()
+      clearAllState()
       toast.success('캠핑 완료! 다이어리에 기록되었습니다.')
     } catch {
       toast.error('완료 처리 실패')
@@ -148,7 +152,7 @@ function TripHero({ trip, onNewTrip, onEdit }: { trip: Trip; onNewTrip: () => vo
     if (!confirm('캠핑을 취소하시겠습니까? 등록된 데이터가 삭제됩니다.')) return
     try {
       await deleteTrip.mutateAsync(trip.id)
-      clearLocalState()
+      clearAllState()
       toast.success('캠핑이 취소되었습니다.')
     } catch {
       toast.error('취소 처리 실패')
