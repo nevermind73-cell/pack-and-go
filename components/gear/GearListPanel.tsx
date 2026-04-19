@@ -15,7 +15,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { toast } from 'sonner'
-import { Plus, Search, ChevronDown, ChevronRight, Trash2, Download, Star, Pencil } from 'lucide-react'
+import { Plus, Search, ChevronDown, ChevronRight, Trash2, Download, Star, Pencil, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -144,15 +144,24 @@ function WishlistRow({
       onClick={onClick}
     >
       <span className="flex-1 text-sm truncate">{item.name}</span>
-      {item.manufacturer && (
-        <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[80px]">{item.manufacturer}</span>
-      )}
-      {item.price != null && (
-        <span className="text-xs text-muted-foreground shrink-0">{formatPrice(item.price)}</span>
-      )}
-      {item.weight_g != null && (
-        <span className="text-xs text-muted-foreground shrink-0">{formatWeight(Number(item.weight_g))}</span>
-      )}
+      <span className="text-xs text-muted-foreground hidden sm:block truncate w-[80px]">
+        {item.manufacturer ?? ''}
+      </span>
+      <span className="text-xs text-muted-foreground w-[72px] text-right shrink-0">
+        {item.price != null ? formatPrice(item.price) : ''}
+      </span>
+      <span className="text-xs text-muted-foreground w-[52px] text-right shrink-0">
+        {item.weight_g != null ? formatWeight(Number(item.weight_g)) : ''}
+      </span>
+      <span className="w-[20px] flex items-center justify-center shrink-0">
+        {item.url
+          ? <a href={item.url} target="_blank" rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-muted-foreground hover:text-blue-500 transition-colors">
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          : null}
+      </span>
       <button
         onClick={(e) => { e.stopPropagation(); onClick() }}
         className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-colors shrink-0"
