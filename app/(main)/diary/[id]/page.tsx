@@ -66,30 +66,35 @@ export default function DiaryDetailPage() {
   const uploadPhoto = useUploadDiaryPhoto()
   const deletePhoto = useDeleteDiaryPhoto()
 
-  const [content, setContent] = useState('')
-  const [contentSaved, setContentSaved] = useState(true)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (diary?.content !== undefined) {
-      setContent(diary.content ?? '')
+    if (!editing && diary?.content !== undefined) {
+      setDraft(diary.content ?? '')
     }
-  }, [diary?.content])
+  }, [diary?.content, editing])
 
-  function handleContentChange(value: string) {
-    setContent(value)
-    setContentSaved(false)
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(async () => {
-      try {
-        await updateDiary.mutateAsync({ id, content: value })
-        setContentSaved(true)
-      } catch {
-        toast.error('저장 실패')
-      }
-    }, 1000)
+  function handleEditStart() {
+    setDraft(diary?.content ?? '')
+    setEditing(true)
+  }
+
+  function handleEditCancel() {
+    setDraft(diary?.content ?? '')
+    setEditing(false)
+  }
+
+  async function handleEditSave() {
+    try {
+      await updateDiary.mutateAsync({ id, content: draft })
+      setEditing(false)
+      toast.success('저장되었습니다.')
+    } catch {
+      toast.error('저장 실패')
+    }
   }
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -211,16 +216,47 @@ export default function DiaryDetailPage() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold text-sm">비고</h2>
-              <span className="text-xs text-muted-foreground">
-                {contentSaved ? '저장됨' : '저장 중…'}
-              </span>
+              {editing ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleEditCancel}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleEditSave}
+                    disabled={updateDiary.isPending}
+                    className="text-xs font-medium text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
+                  >
+                    {updateDiary.isPending ? '저장 중…' : '저장'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleEditStart}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  수정
+                </button>
+              )}
             </div>
-            <Textarea
-              value={content}
-              onChange={(e) => handleContentChange(e.target.value)}
-              placeholder="여행 메모를 자유롭게 작성하세요"
-              className="min-h-36 resize-none"
-            />
+            {editing ? (
+              <Textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="여행 메모를 자유롭게 작성하세요"
+                className="min-h-36 resize-none"
+                autoFocus
+              />
+            ) : (
+              <div
+                onClick={handleEditStart}
+                className="min-h-36 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm cursor-text whitespace-pre-wrap text-muted-foreground"
+              >
+                {diary?.content || '여행 메모를 자유롭게 작성하세요'}
+              </div>
+            )}
           </div>
 
           {/* 사진 */}
