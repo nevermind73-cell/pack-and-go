@@ -47,7 +47,9 @@ function formatWeight(g: number): string {
   return g >= 1000 ? `${(g / 1000).toFixed(2)} kg` : `${g} g`
 }
 
-function formatPrice(p: number): string {
+function formatPrice(p: number, currency: string | null): string {
+  if (currency === 'USD') return `$${p.toLocaleString('en-US')}`
+  if (currency === 'JPY') return `¥${p.toLocaleString('ja-JP')}`
   return p.toLocaleString('ko-KR') + '원'
 }
 
@@ -150,7 +152,7 @@ function WishlistRow({
         {item.manufacturer ?? ''}
       </span>
       <span className="text-xs text-muted-foreground w-[72px] text-right shrink-0">
-        {item.price != null ? formatPrice(item.price) : ''}
+        {item.price != null ? formatPrice(item.price, item.price_currency) : ''}
       </span>
       <span className="text-xs text-muted-foreground w-[52px] text-right shrink-0">
         {item.weight_g != null ? formatWeight(Number(item.weight_g)) : ''}
