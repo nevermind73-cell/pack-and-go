@@ -140,12 +140,9 @@ function WishlistRow({
   onClick: () => void
   onDelete: () => void
 }) {
-  const [hovered, setHovered] = useState(false)
   return (
     <div
-      className="flex items-center gap-3 px-4 py-2 hover:bg-muted/30 cursor-pointer"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className="group flex items-center gap-3 px-4 py-2 hover:bg-muted/30 cursor-pointer"
       onClick={onClick}
     >
       <span className="flex-1 text-sm truncate">{item.name}</span>
@@ -155,17 +152,15 @@ function WishlistRow({
       {item.price != null && (
         <span className="text-xs text-muted-foreground shrink-0">{formatPrice(item.price)}</span>
       )}
-      {item.weight_g != null && !hovered && (
+      {item.weight_g != null && (
         <span className="text-xs text-muted-foreground shrink-0">{formatWeight(Number(item.weight_g))}</span>
       )}
-      {hovered && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete() }}
-          className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      )}
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete() }}
+        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
     </div>
   )
 }
