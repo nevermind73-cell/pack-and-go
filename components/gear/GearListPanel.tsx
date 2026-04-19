@@ -15,7 +15,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { toast } from 'sonner'
-import { Plus, Search, ChevronDown, ChevronRight, Trash2, Download, Star } from 'lucide-react'
+import { Plus, Search, ChevronDown, ChevronRight, Trash2, Download, Star, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -38,7 +38,7 @@ import {
   type Gear,
   type GearGroup,
 } from '@/hooks/useGear'
-import { useWishlist, useDeleteWishlistItem, type WishlistItem } from '@/hooks/useWishlist'
+import { useWishlist, type WishlistItem } from '@/hooks/useWishlist'
 import { usePackStore } from '@/stores/packStore'
 
 type Tab = 'my' | 'list' | 'wishlist'
@@ -134,11 +134,9 @@ function GroupDetailDialog({
 function WishlistRow({
   item,
   onClick,
-  onDelete,
 }: {
   item: WishlistItem
   onClick: () => void
-  onDelete: () => void
 }) {
   return (
     <div
@@ -156,10 +154,10 @@ function WishlistRow({
         <span className="text-xs text-muted-foreground shrink-0">{formatWeight(Number(item.weight_g))}</span>
       )}
       <button
-        onClick={(e) => { e.stopPropagation(); onDelete() }}
-        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+        onClick={(e) => { e.stopPropagation(); onClick() }}
+        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-colors shrink-0"
       >
-        <Trash2 className="h-3.5 w-3.5" />
+        <Pencil className="h-3.5 w-3.5" />
       </button>
     </div>
   )
@@ -186,7 +184,7 @@ export function GearListPanel() {
 
   // 위시리스트 상태
   const { data: wishlist, isLoading: wishlistLoading } = useWishlist()
-  const deleteWishlistItem = useDeleteWishlistItem()
+
   const [wishSearch, setWishSearch] = useState('')
   const [wishFormOpen, setWishFormOpen] = useState(false)
   const [wishEditTarget, setWishEditTarget] = useState<WishlistItem | undefined>()
@@ -516,15 +514,6 @@ export function GearListPanel() {
                       key={item.id}
                       item={item}
                       onClick={() => setWishDetailTarget(item)}
-                      onDelete={async () => {
-                        if (!confirm(`"${item.name}"을 삭제하시겠습니까?`)) return
-                        try {
-                          await deleteWishlistItem.mutateAsync(item.id)
-                          toast.success('삭제되었습니다.')
-                        } catch (err) {
-                          toast.error(err instanceof Error ? err.message : '삭제에 실패했습니다.')
-                        }
-                      }}
                     />
                   ))}
                 </div>
