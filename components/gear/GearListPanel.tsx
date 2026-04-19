@@ -134,9 +134,11 @@ function GroupDetailDialog({
 function WishlistRow({
   item,
   onClick,
+  onEdit,
 }: {
   item: WishlistItem
   onClick: () => void
+  onEdit: () => void
 }) {
   return (
     <div
@@ -163,7 +165,7 @@ function WishlistRow({
           : null}
       </span>
       <button
-        onClick={(e) => { e.stopPropagation(); onClick() }}
+        onClick={(e) => { e.stopPropagation(); onEdit() }}
         className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-colors shrink-0"
       >
         <Pencil className="h-3.5 w-3.5" />
@@ -523,6 +525,7 @@ export function GearListPanel() {
                       key={item.id}
                       item={item}
                       onClick={() => setWishDetailTarget(item)}
+                      onEdit={() => { setWishEditTarget(item); setWishFormOpen(true) }}
                     />
                   ))}
                 </div>
