@@ -19,10 +19,10 @@ export function PackChecklist() {
   const { data: gearList } = useGear()
   const { checkedGearIds, toggleGearCheck } = useTripCheckStore()
 
-  // DB 우선, 없으면 로컬 store fallback
+  // trip이 있을 때만 DB 데이터 표시. trip 없으면 빈 목록 (기기간 동기화 일관성)
   const sourceItems: PackItem[] = trip
     ? (Array.isArray(trip.pack_items) ? trip.pack_items : [])
-    : committedItems
+    : []
 
   const safeGearList = Array.isArray(gearList) ? gearList : []
   const gearMap = useMemo(

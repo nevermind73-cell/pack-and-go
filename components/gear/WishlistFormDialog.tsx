@@ -17,15 +17,22 @@ import {
   useCreateWishlistItem,
   useUpdateWishlistItem,
   useDeleteWishlistItem,
+  useWishlist,
   type WishlistItem,
+  type PriceCurrency,
 } from '@/hooks/useWishlist'
-import { useWishlist } from '@/hooks/useWishlist'
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   item?: WishlistItem
 }
+
+const CURRENCIES: { value: PriceCurrency; label: string }[] = [
+  { value: 'KRW', label: '원' },
+  { value: 'USD', label: 'USD' },
+  { value: 'JPY', label: '엔화' },
+]
 
 export function WishlistFormDialog({ open, onOpenChange, item }: Props) {
   const isEdit = !!item
@@ -35,6 +42,7 @@ export function WishlistFormDialog({ open, onOpenChange, item }: Props) {
   const [category, setCategory] = useState('')
   const [manufacturer, setManufacturer] = useState('')
   const [price, setPrice] = useState('')
+  const [currency, setCurrency] = useState<PriceCurrency>('KRW')
   const [weightG, setWeightG] = useState('')
   const [memo, setMemo] = useState('')
   const [url, setUrl] = useState('')
@@ -43,7 +51,6 @@ export function WishlistFormDialog({ open, onOpenChange, item }: Props) {
   const updateItem = useUpdateWishlistItem()
   const deleteItem = useDeleteWishlistItem()
 
-  // 카테고리 목록
   const categories = Array.from(
     new Set((Array.isArray(wishlist) ? wishlist : []).map((i) => i.category).filter(Boolean) as string[])
   )
@@ -54,6 +61,7 @@ export function WishlistFormDialog({ open, onOpenChange, item }: Props) {
       setCategory(item?.category ?? '')
       setManufacturer(item?.manufacturer ?? '')
       setPrice(item?.price != null ? String(item.price) : '')
+      setCurrency(item?.price_currency ?? 'KRW')
       setWeightG(item?.weight_g != null ? String(item.weight_g) : '')
       setMemo(item?.memo ?? '')
       setUrl(item?.url ?? '')
@@ -69,6 +77,7 @@ export function WishlistFormDialog({ open, onOpenChange, item }: Props) {
       category: category.trim() || undefined,
       manufacturer: manufacturer.trim() || undefined,
       price: price ? Number(price) : undefined,
+      price_currency: price ? currency : undefined,
       weight_g: weightG ? Number(weightG) : undefined,
       memo: memo.trim() || undefined,
       url: url.trim() || undefined,
@@ -148,15 +157,33 @@ export function WishlistFormDialog({ open, onOpenChange, item }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="wl-price">가격 (원)</Label>
-              <Input
-                id="wl-price"
-                type="number"
-                min={0}
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="예: 89000"
-              />
+              <Label>가격</Label>
+              <div className="flex gap-1.5">
+                <div className="flex rounded-md border overflow-hidden shrink-0">
+                  {CURRENCIES.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setCurrency(c.value)}
+                      className={`px-2 py-1.5 text-xs transition-colors ${
+                        currency === c.value
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-background text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+                <Input
+                  type="number"
+                  min={0}
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0"
+                  className="flex-1 min-w-0"
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="wl-weight">무게 (g)</Label>

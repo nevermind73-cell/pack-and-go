@@ -19,10 +19,10 @@ export function EatChecklist() {
 
   const safeList = Array.isArray(recipeList) ? recipeList : []
 
-  // DB 우선, 없으면 로컬 store fallback
+  // trip이 있을 때만 DB 데이터 표시. trip 없으면 빈 목록 (기기간 동기화 일관성)
   const sourceIds: string[] = trip
     ? (Array.isArray(trip.shopping_recipe_ids) ? trip.shopping_recipe_ids : [])
-    : shoppingStore.committedRecipeIds
+    : []
 
   const selectedRecipes = useMemo(
     () => safeList.filter((r) => sourceIds.includes(r.id)),

@@ -8,13 +8,15 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ExternalLink, Pencil } from 'lucide-react'
-import type { WishlistItem } from '@/hooks/useWishlist'
+import type { WishlistItem, PriceCurrency } from '@/hooks/useWishlist'
 
 function formatWeight(g: number): string {
   return g >= 1000 ? `${(g / 1000).toFixed(2)} kg` : `${g} g`
 }
 
-function formatPrice(p: number): string {
+function formatPrice(p: number, currency: PriceCurrency | null): string {
+  if (currency === 'USD') return `$${p.toLocaleString('en-US')}`
+  if (currency === 'JPY') return `¥${p.toLocaleString('ja-JP')}`
   return p.toLocaleString('ko-KR') + '원'
 }
 
@@ -63,7 +65,7 @@ export function WishlistDetailDialog({ item, open, onOpenChange, onEdit }: Props
             {item.price != null && (
               <>
                 <span className="text-muted-foreground">가격</span>
-                <span>{formatPrice(item.price)}</span>
+                <span>{formatPrice(item.price, item.price_currency)}</span>
               </>
             )}
             {item.weight_g != null && (
@@ -80,10 +82,10 @@ export function WishlistDetailDialog({ item, open, onOpenChange, onEdit }: Props
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-sm text-blue-500 hover:underline truncate"
+              className="flex items-center gap-1.5 text-sm text-blue-500 hover:underline min-w-0"
             >
               <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{item.url}</span>
+              <span className="break-all">{item.url}</span>
             </a>
           )}
 

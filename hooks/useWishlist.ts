@@ -2,6 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
+export type PriceCurrency = 'KRW' | 'USD' | 'JPY'
+
 export interface WishlistItem {
   id: string
   user_id: string
@@ -9,6 +11,7 @@ export interface WishlistItem {
   category: string | null
   manufacturer: string | null
   price: number | null
+  price_currency: PriceCurrency | null
   weight_g: number | null
   memo: string | null
   url: string | null
@@ -20,6 +23,7 @@ export interface WishlistInput {
   category?: string
   manufacturer?: string
   price?: number
+  price_currency?: PriceCurrency
   weight_g?: number
   memo?: string
   url?: string

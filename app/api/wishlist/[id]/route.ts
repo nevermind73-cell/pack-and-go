@@ -11,13 +11,14 @@ export async function PATCH(
 
   const { id } = await params
   const body = await request.json()
-  const { name, category, manufacturer, price, weight_g, memo, url } = body
+  const { name, category, manufacturer, price, price_currency, weight_g, memo, url } = body
 
   const updates: Record<string, unknown> = {}
   if (name !== undefined) updates.name = name
   if (category !== undefined) updates.category = category || null
   if (manufacturer !== undefined) updates.manufacturer = manufacturer || null
   if (price !== undefined) updates.price = price || null
+  if (price_currency !== undefined) updates.price_currency = price_currency || null
   if (weight_g !== undefined) updates.weight_g = weight_g || null
   if (memo !== undefined) updates.memo = memo || null
   if (url !== undefined) updates.url = url || null

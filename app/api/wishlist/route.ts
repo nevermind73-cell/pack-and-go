@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { name, category, manufacturer, price, weight_g, memo, url } = body
+  const { name, category, manufacturer, price, price_currency, weight_g, memo, url } = body
 
   if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
 
@@ -34,6 +34,7 @@ export async function POST(request: Request) {
       category: category || null,
       manufacturer: manufacturer || null,
       price: price || null,
+      price_currency: price_currency || null,
       weight_g: weight_g || null,
       memo: memo || null,
       url: url || null,
