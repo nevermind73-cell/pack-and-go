@@ -407,7 +407,7 @@ export function GearListPanel() {
             )}
           </div>
         </div>
-      ) : (
+      ) : tab === 'list' ? (
         /* 리스트 탭 */
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {groupsLoading ? (
@@ -475,7 +475,7 @@ export function GearListPanel() {
             })
           )}
         </div>
-      )}
+      ) : null}
 
       {/* 위시리스트 탭 */}
       {tab === 'wishlist' && (
