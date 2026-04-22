@@ -290,13 +290,14 @@ export function SiteList({ searchQuery, filterMode, onOpenAdd }: SiteListProps) 
     if (!activeId) setLocalGrouped(new Map(Array.from(grouped.entries()).map(([k, v]) => [k, [...v]])))
   }, [grouped, activeId])
 
-  // 새 지역을 regionOrder 끝에 추가
+  // 새 지역이 추가됐을 때만 regionOrder 끝에 추가 (로딩 중 빈 grouped로 덮어쓰기 방지)
   useEffect(() => {
     const current = Array.from(grouped.keys())
+    if (current.length === 0) return
     setRegionOrder((prev) => {
-      const kept = prev.filter((r) => current.includes(r))
       const added = current.filter((r) => !prev.includes(r))
-      const updated = [...kept, ...added]
+      if (added.length === 0) return prev
+      const updated = [...prev, ...added]
       localStorage.setItem(REGION_ORDER_KEY, JSON.stringify(updated))
       return updated
     })
