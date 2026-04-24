@@ -62,7 +62,7 @@ function SiteCard({ site, onClick }: SiteCardProps) {
   return (
     <div
       onClick={onClick}
-      className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4 w-fit min-w-80 max-w-[32rem] cursor-pointer hover:bg-white/20 transition-colors flex flex-col justify-center"
+      className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4 w-full md:w-fit md:min-w-80 md:max-w-[32rem] cursor-pointer hover:bg-white/20 transition-colors flex flex-col justify-center"
     >
       <p className="text-white/80 text-2xl font-bold mb-0.5 text-center">
         {startFmt}
@@ -120,7 +120,7 @@ function WeatherStrip({ trip }: { trip: Trip }) {
   if (!lat || !lng) return null
 
   return (
-    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 flex gap-3 overflow-x-auto items-center">
+    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 flex gap-3 overflow-x-auto items-center w-full md:w-auto">
       {campingDates.map((date) => {
         const weather = forecastMap.get(date)
         const d = new Date(date)
@@ -262,7 +262,7 @@ function TripHero({ trip, onNewTrip, onEdit }: { trip: Trip; onNewTrip: () => vo
       {/* 캠핑장 카드 + 날씨 카드 한 줄 (모바일은 세로 스택) */}
       {trip.trip_sites.length > 0 && (
         <div className="flex flex-col md:flex-row gap-3 items-stretch justify-center">
-          <div className="flex gap-3 flex-wrap justify-center">
+          <div className="flex gap-3 flex-wrap justify-center w-full md:w-auto">
             {[...trip.trip_sites]
               .sort((a, b) => a.sort_order - b.sort_order)
               .map((ts) => (
