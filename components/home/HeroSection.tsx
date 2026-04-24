@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { MapPin, Navigation, ChevronDown, Plus, Thermometer } from 'lucide-react'
+import { MapPin, Navigation, ChevronDown, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrentTrip, useUpdateTrip, useDeleteTrip, type Trip } from '@/hooks/useTrips'
-import { useWeather } from '@/hooks/useWeather'
+import { useWeatherForecast } from '@/hooks/useWeatherForecast'
 import { useTripCheckStore } from '@/stores/tripStore'
 import { usePackStore } from '@/stores/packStore'
 import { useShoppingStore } from '@/stores/shoppingStore'
@@ -55,20 +55,15 @@ interface SiteCardProps {
   onClick: () => void
 }
 
-function SiteCard({ site, tripStartDate, onClick }: SiteCardProps) {
-  const { data: weather } = useWeather(
-    site.site.lat,
-    site.site.lng,
-    site.start_date ?? tripStartDate
-  )
-
+function SiteCard({ site, onClick }: SiteCardProps) {
   const startFmt = formatDate(site.start_date)
   const endFmt = site.end_date ? formatDate(site.end_date) : null
 
   return (
     <div
       onClick={onClick}
-      className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4 w-fit min-w-80 max-w-[32rem] cursor-pointer hover:bg-white/20 transition-colors">
+      className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4 w-fit min-w-80 max-w-[32rem] cursor-pointer hover:bg-white/20 transition-colors flex flex-col justify-center"
+    >
       <p className="text-white/80 text-2xl font-bold mb-0.5 text-center">
         {startFmt}
         {endFmt && ` ~ ${endFmt}`}
@@ -76,7 +71,6 @@ function SiteCard({ site, tripStartDate, onClick }: SiteCardProps) {
       <h3 className="text-white font-bold text-2xl leading-tight mb-3 text-center">{site.site.name}</h3>
 
       <div className="flex flex-col gap-1.5 text-xs text-white/80">
-        {/* 지도 링크 */}
         <a
           href={naverMapUrl(site.site.name)}
           target="_blank"
@@ -86,31 +80,81 @@ function SiteCard({ site, tripStartDate, onClick }: SiteCardProps) {
           <MapPin className="h-3 w-3 shrink-0" />
           <span className="truncate">{site.site.address ?? site.site.region ?? '지도 보기'}</span>
         </a>
-
-        {/* 거리 */}
         {site.site.distance_km && (
           <div className="flex items-center gap-1.5">
             <Navigation className="h-3 w-3 shrink-0" />
             <span>{site.site.distance_km} km</span>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
 
-        {/* 날씨 */}
-        {weather && (
-          <div className="flex items-center gap-1.5">
-            <Thermometer className="h-3 w-3 shrink-0" />
-            <span>
-              {weather.temp_min}°C ~ {weather.temp_max}°C
-            </span>
-            {weather.description && (
-              <span className="text-white/60">({weather.description})</span>
-            )}
-            {weather.out_of_range && (
-              <span className="text-white/50 text-xs">*근사치</span>
+// ── 일별 날씨 스트립 ────────────────────────────────────────────
+
+const DAY_KO = ['일', '월', '화', '수', '목', '금', '토']
+
+function getDatesInRange(start: string, end: string | null): string[] {
+  const dates: string[] = []
+  const cur = new Date(start)
+  const last = end ? new Date(end) : new Date(start)
+  while (cur <= last) {
+    dates.push(cur.toISOString().split('T')[0])
+    cur.setDate(cur.getDate() + 1)
+  }
+  return dates
+}
+
+function WeatherStrip({ trip }: { trip: Trip }) {
+  const sortedSites = [...trip.trip_sites].sort((a, b) => a.sort_order - b.sort_order)
+  const firstSite = sortedSites[0]
+  const lat = firstSite?.site?.lat ?? null
+  const lng = firstSite?.site?.lng ?? null
+
+  const { data: forecast = [] } = useWeatherForecast(lat, lng)
+
+  const campingDates = getDatesInRange(trip.start_date, trip.end_date)
+  const forecastMap = new Map(forecast.map((f) => [f.date, f]))
+
+  if (!lat || !lng) return null
+
+  return (
+    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 flex gap-3 overflow-x-auto items-center">
+      {campingDates.map((date) => {
+        const weather = forecastMap.get(date)
+        const d = new Date(date)
+        const dayLabel = DAY_KO[d.getDay()]
+        const dateLabel = `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+
+        return (
+          <div
+            key={date}
+            className="flex flex-col items-center gap-0.5 min-w-[56px]"
+          >
+            <span className="text-white/60 text-xs">{dayLabel}</span>
+            <span className="text-white text-xs font-medium">{dateLabel}</span>
+            {weather ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
+                  alt={weather.description}
+                  className="w-10 h-10"
+                />
+                <span className="text-white text-xs font-semibold">{weather.temp_max}°</span>
+                <span className="text-white/60 text-xs">{weather.temp_min}°</span>
+              </>
+            ) : (
+              <>
+                <div className="w-10 h-10 flex items-center justify-center text-white/30 text-lg">—</div>
+                <span className="text-white/40 text-xs">-°</span>
+                <span className="text-white/40 text-xs">-°</span>
+              </>
             )}
           </div>
-        )}
-      </div>
+        )
+      })}
     </div>
   )
 }
@@ -215,14 +259,17 @@ function TripHero({ trip, onNewTrip, onEdit }: { trip: Trip; onNewTrip: () => vo
         </div>
       </div>
 
-      {/* 캠핑장 카드 목록 */}
+      {/* 캠핑장 카드 + 날씨 카드 한 줄 (모바일은 세로 스택) */}
       {trip.trip_sites.length > 0 && (
-        <div className="flex gap-3 flex-wrap justify-center">
-          {[...trip.trip_sites]
-            .sort((a, b) => a.sort_order - b.sort_order)
-            .map((ts) => (
-              <SiteCard key={ts.id} site={ts} tripStartDate={trip.start_date} onClick={onEdit} />
-            ))}
+        <div className="flex flex-col md:flex-row gap-3 items-stretch justify-center">
+          <div className="flex gap-3 flex-wrap justify-center">
+            {[...trip.trip_sites]
+              .sort((a, b) => a.sort_order - b.sort_order)
+              .map((ts) => (
+                <SiteCard key={ts.id} site={ts} tripStartDate={trip.start_date} onClick={onEdit} />
+              ))}
+          </div>
+          <WeatherStrip trip={trip} />
         </div>
       )}
     </div>
