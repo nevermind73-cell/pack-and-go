@@ -17,7 +17,27 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/s
 import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
 import { navItems } from './Sidebar'
+import { useCurrentTrip } from '@/hooks/useTrips'
+import { Tent } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+const INK       = '#151513'
+const PAPER2    = '#ece4d2'
+const STAMP     = '#b54a2b'
+const MUTED     = '#8a7f77'
+const DIVIDER   = '#2e2925'
+const ACTIVE_BG = 'rgba(255,255,255,0.07)'
+const BADGE_BG  = 'rgba(181,74,43,0.16)'
+const BADGE_BD  = 'rgba(181,74,43,0.32)'
+
+function calcDDay(startDate: string): string {
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const target = new Date(startDate); target.setHours(0, 0, 0, 0)
+  const diff = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  if (diff === 0) return 'D-Day'
+  if (diff > 0) return `D-${diff}`
+  return `D+${Math.abs(diff)}`
+}
 
 const pageTitles: Record<string, string> = {
   '/': 'Home',
@@ -40,6 +60,8 @@ export function TopBar({ user }: TopBarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [sheetOpen, setSheetOpen] = useState(false)
+  const { data: trip } = useCurrentTrip()
+  const dday = trip ? calcDDay(trip.start_date) : null
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -61,30 +83,47 @@ export function TopBar({ user }: TopBarProps) {
           >
             <Menu size={20} />
           </SheetTrigger>
-          <SheetContent side="left" className="w-56 p-0">
+          <SheetContent side="left" className="w-56 p-0" style={{ backgroundColor: INK }}>
             <SheetTitle className="sr-only">Navigation</SheetTitle>
-            <div className="flex items-center gap-2 px-5 py-5 border-b">
-              <span className="text-2xl">⛺</span>
-              <span className="font-bold text-lg tracking-tight">Pack &amp; Go!</span>
+            {/* 브랜드 마크 */}
+            <div className="flex items-center gap-2.5 px-4 py-5">
+              <div
+                className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
+                style={{ backgroundColor: STAMP, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12)' }}
+              >
+                <Tent size={16} color="#fff" />
+              </div>
+              <span className="font-bold text-base tracking-tight" style={{ color: PAPER2 }}>
+                Pack &amp; Go!
+              </span>
             </div>
-            <nav className="flex flex-col gap-1 p-3">
+            {/* 구분선 */}
+            <div className="mx-4 mb-3" style={{ height: 1, backgroundColor: DIVIDER }} />
+            <nav className="flex flex-col gap-0.5 px-3">
               {navItems.map(({ href, label, icon: Icon }) => {
-                const isActive =
-                  href === '/' ? pathname === '/' : pathname.startsWith(href)
+                const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
+                const showBadge = href === '/' && dday
                 return (
                   <Link
                     key={href}
                     href={href}
                     onClick={() => setSheetOpen(false)}
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                    )}
+                    style={{
+                      backgroundColor: isActive ? ACTIVE_BG : undefined,
+                      color: isActive ? '#ffffff' : PAPER2,
+                    }}
+                    className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >
-                    <Icon size={18} />
-                    {label}
+                    <Icon size={16} style={{ color: isActive ? STAMP : MUTED }} />
+                    <span className="flex-1">{label}</span>
+                    {showBadge && (
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                        style={{ color: STAMP, backgroundColor: BADGE_BG, border: `1px solid ${BADGE_BD}` }}
+                      >
+                        {dday}
+                      </span>
+                    )}
                   </Link>
                 )
               })}
