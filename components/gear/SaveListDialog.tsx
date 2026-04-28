@@ -37,7 +37,7 @@ export function SaveListDialog({ open, onOpenChange, packItems }: SaveListDialog
       if (group?.id && packItems.length > 0) {
         await Promise.all(
           packItems.map((item) =>
-            addToGroup.mutateAsync({ groupId: group.id, gearId: item.gearId })
+            addToGroup.mutateAsync({ groupId: group.id, gearId: item.gearId, quantity: item.quantity })
           )
         )
       }

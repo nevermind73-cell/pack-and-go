@@ -24,6 +24,7 @@ export interface GearGroup {
   created_at: string
   gear_group_items: {
     gear_id: string
+    quantity: number
     gear: Gear
   }[]
 }
@@ -161,11 +162,11 @@ export function useDeleteGearGroup() {
 export function useAddGearToGroup() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ groupId, gearId }: { groupId: string; gearId: string }) =>
+    mutationFn: ({ groupId, gearId, quantity = 1 }: { groupId: string; gearId: string; quantity?: number }) =>
       apiFetch(`/api/gear/groups/${groupId}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gear_id: gearId }),
+        body: JSON.stringify({ gear_id: gearId, quantity }),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['gear-groups'] }),
   })

@@ -38,7 +38,7 @@ function formatWeight(g: number): string {
 
 function groupTotalWeight(group: GearGroup): number {
   return group.gear_group_items.reduce(
-    (sum, i) => sum + Number(i.gear?.weight_g ?? 0),
+    (sum, i) => sum + Number(i.gear?.weight_g ?? 0) * (i.quantity ?? 1),
     0
   )
 }

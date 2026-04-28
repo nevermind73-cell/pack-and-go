@@ -1,0 +1,1 @@
+ALTER TABLE gear_group_items ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 1;

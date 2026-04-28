@@ -64,7 +64,7 @@ function GroupDetailDialog({
   onOpenChange: (v: boolean) => void
 }) {
   const items = group.gear_group_items
-  const totalWeightG = items.reduce((sum, i) => sum + Number(i.gear?.weight_g ?? 0), 0)
+  const totalWeightG = items.reduce((sum, i) => sum + Number(i.gear?.weight_g ?? 0) * (i.quantity ?? 1), 0)
 
   const categoryMap = useMemo(() => {
     const map = new Map<string, typeof items>()
@@ -100,7 +100,7 @@ function GroupDetailDialog({
             <p className="text-sm text-muted-foreground text-center py-6">장비가 없습니다.</p>
           ) : (
             Array.from(categoryMap.entries()).map(([category, catItems]) => {
-              const catWeight = catItems.reduce((sum, i) => sum + Number(i.gear?.weight_g ?? 0), 0)
+              const catWeight = catItems.reduce((sum, i) => sum + Number(i.gear?.weight_g ?? 0) * (i.quantity ?? 1), 0)
               return (
                 <div key={category}>
                   <div className="pt-3 pb-1">
@@ -114,14 +114,21 @@ function GroupDetailDialog({
                     </div>
                     <div className="border-b mt-1" />
                   </div>
-                  {catItems.map((item) => (
-                    <div key={item.gear_id} className="flex items-center justify-between py-1.5">
-                      <span className="text-sm">{item.gear?.name ?? item.gear_id}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {Number(item.gear?.weight_g ?? 0) > 0 ? formatWeight(Number(item.gear!.weight_g)) : '—'}
-                      </span>
-                    </div>
-                  ))}
+                  {catItems.map((item) => {
+                    const qty = item.quantity ?? 1
+                    const w = Number(item.gear?.weight_g ?? 0)
+                    return (
+                      <div key={item.gear_id} className="flex items-center justify-between py-1.5">
+                        <span className="text-sm">
+                          {item.gear?.name ?? item.gear_id}
+                          {qty > 1 && <span className="text-muted-foreground ml-1">×{qty}</span>}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {w > 0 ? formatWeight(w * qty) : '—'}
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
               )
             })
@@ -428,7 +435,7 @@ export function GearListPanel() {
           ) : (
             safeGroups.map((group) => {
               const totalWeightG = group.gear_group_items.reduce(
-                (sum, i) => sum + Number(i.gear?.weight_g ?? 0), 0
+                (sum, i) => sum + Number(i.gear?.weight_g ?? 0) * (i.quantity ?? 1), 0
               )
               const count = group.gear_group_items.length
               return (

@@ -11,6 +11,7 @@ export async function GET() {
       *,
       gear_group_items (
         gear_id,
+        quantity,
         gear (id, name, category, gear_type, weight_g, memo)
       )
     `)

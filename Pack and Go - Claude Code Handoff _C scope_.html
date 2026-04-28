@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pack & Go — Claude Code 핸드오프 · C 범위</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+KR:wght@400;500;600&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper:    #f4ecd8;
+    --paper-2:  #ece4d2;
+    --paper-3:  #ddd2b8;
+    --ink:      #1a1a17;
+    --ink-2:    #44423a;
+    --ink-3:    #6b6857;
+    --ink-4:    #94907c;
+    --rule:     #c9be9f;
+    --stamp:    #b54a2b;
+    --stamp-2:  #7a2d15;
+    --stamp-bg: #faf3e2;
+    --code:     #2a2824;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Pretendard", system-ui, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.6;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(181,74,43,0.04), transparent 60%),
+      repeating-linear-gradient(0deg, transparent 0 31px, rgba(28,24,20,0.025) 31px 32px);
+  }
+
+  .doc { max-width: 1080px; margin: 0 auto; padding: 56px 48px 96px; }
+
+  /* mast */
+  .mast { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 18px 0 14px; }
+  .mast-row { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; flex-wrap: wrap; }
+  .mast-title { font-family: "Instrument Serif", serif; font-size: 32px; letter-spacing: -0.01em; }
+  .mast-title em { font-style: italic; color: var(--stamp); }
+  .mast-meta {
+    display: flex; gap: 22px; flex-wrap: wrap;
+    font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--ink-3);
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--stamp); display: inline-block; margin-right: 6px; vertical-align: middle; }
+
+  /* hero */
+  .hero { padding: 56px 0 48px; border-bottom: 1px solid var(--rule); }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--stamp-2); font-weight: 600;
+  }
+  .eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--stamp); }
+  h1.display {
+    font-family: "Noto Serif KR", serif;
+    font-size: 56px; line-height: 1.05; letter-spacing: -0.02em;
+    margin: 14px 0 18px; color: var(--ink); font-weight: 500;
+    text-wrap: balance;
+  }
+  h1.display em { font-family: "Instrument Serif", serif; font-style: italic; font-weight: 400; color: var(--stamp); }
+  .lede { font-size: 17px; color: var(--ink-2); max-width: 60ch; line-height: 1.65; }
+
+  .summary-grid {
+    margin-top: 36px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+    border: 1px solid var(--rule); background: rgba(255,255,255,.35);
+  }
+  .summary-grid .cell { padding: 18px 20px; border-right: 1px solid var(--rule); }
+  .summary-grid .cell:last-child { border-right: 0; }
+  .summary-grid .label { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-4); }
+  .summary-grid .val { font-family: "Instrument Serif", serif; font-size: 30px; line-height: 1.1; color: var(--ink); margin-top: 8px; }
+  .summary-grid .val em { font-style: italic; color: var(--stamp); }
+  .summary-grid .sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+  /* sections */
+  section { padding: 48px 0; border-bottom: 1px solid var(--rule); }
+  section:last-of-type { border-bottom: 0; }
+  .sec-num { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--stamp); letter-spacing: 0.12em; }
+  h2.sec-title {
+    font-family: "Noto Serif KR", serif; font-weight: 500;
+    font-size: 30px; line-height: 1.2; margin: 6px 0 8px; letter-spacing: -0.01em;
+  }
+  h2.sec-title em { font-family: "Instrument Serif", serif; font-style: italic; font-weight: 400; color: var(--stamp); }
+  .sec-intro { font-size: 15px; color: var(--ink-2); max-width: 64ch; line-height: 1.65; margin-bottom: 24px; }
+
+  /* token table */
+  table.tokens {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    background: rgba(255,255,255,.4); border: 1px solid var(--rule);
+  }
+  table.tokens th, table.tokens td {
+    text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: middle;
+  }
+  table.tokens th {
+    font-family: "JetBrains Mono", monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--ink-3); font-weight: 600; background: rgba(0,0,0,0.03);
+  }
+  table.tokens tr:last-child td { border-bottom: 0; }
+  table.tokens td .swatch { display: inline-block; width: 18px; height: 18px; border-radius: 4px; vertical-align: middle; margin-right: 8px; border: 1px solid rgba(0,0,0,0.12); }
+  table.tokens td .mono { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--ink-2); }
+  table.tokens td.note { color: var(--ink-3); font-size: 12px; }
+  table.tokens td del { color: var(--ink-4); text-decoration-thickness: 1px; }
+
+  /* file change card */
+  .file {
+    margin-top: 24px;
+    background: #fffaef;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .file-h {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-bottom: 1px solid var(--rule);
+    background: linear-gradient(180deg, #f5ecd2, #ede2c1);
+  }
+  .file-h .path {
+    font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--ink); font-weight: 600;
+  }
+  .file-h .badge {
+    font-family: "JetBrains Mono", monospace; font-size: 9.5px; padding: 2px 7px; border-radius: 99px;
+    text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
+  }
+  .badge.edit { background: #e1ebee; color: #2a5274; border: 1px solid #b9d0d8; }
+  .badge.replace { background: rgba(181,74,43,.12); color: var(--stamp-2); border: 1px solid rgba(181,74,43,.3); }
+  .badge.new { background: #ede5cc; color: #2a2824; border: 1px solid #d4c8af; }
+  .file-h .scope-tag {
+    margin-left: auto;
+    font-family: "JetBrains Mono", monospace; font-size: 10px; color: var(--ink-3);
+    letter-spacing: 0.06em;
+  }
+  .file-body { padding: 14px 18px 18px; }
+  .file-body p { margin: 0 0 12px; font-size: 13.5px; color: var(--ink-2); line-height: 1.6; }
+  .file-body p:last-child { margin-bottom: 0; }
+  .file-body ul { margin: 0 0 12px; padding-left: 20px; font-size: 13.5px; color: var(--ink-2); line-height: 1.65; }
+  .file-body ul li { margin: 3px 0; }
+  .file-body code, code.inline {
+    font-family: "JetBrains Mono", monospace; font-size: 12px;
+    background: var(--paper-2); padding: 1px 5px; border-radius: 3px; color: var(--code);
+    border: 1px solid var(--rule);
+  }
+  pre.diff {
+    margin: 12px 0 0; padding: 14px 16px;
+    background: #1a1a17; color: #e8e2d2;
+    border-radius: 4px; overflow-x: auto;
+    font-family: "JetBrains Mono", monospace; font-size: 11.5px; line-height: 1.55;
+    white-space: pre;
+  }
+  pre.diff .add { color: #9dd58a; }
+  pre.diff .del { color: #e58b6f; }
+  pre.diff .ctx { color: #908a76; }
+  pre.diff .hunk { color: #c8b878; }
+  pre.diff .meta { color: #6f6a5a; }
+
+  /* prompt block */
+  .prompt {
+    margin-top: 18px;
+    background: #1a1a17; color: #ece4d2;
+    border-radius: 6px; padding: 18px 20px;
+    font-family: "JetBrains Mono", monospace; font-size: 12px; line-height: 1.7;
+    white-space: pre-wrap;
+    border: 1px solid #000;
+  }
+  .prompt h4 {
+    font-family: "Pretendard", sans-serif;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--stamp); margin: 0 0 12px; font-weight: 600;
+  }
+
+  .checklist {
+    list-style: none; padding: 0; margin: 16px 0 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px;
+  }
+  .checklist li {
+    font-size: 13px; color: var(--ink-2); padding: 6px 0;
+    border-bottom: 1px dashed var(--rule);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .checklist li::before {
+    content: ""; flex: 0 0 14px; width: 14px; height: 14px;
+    border: 1.5px solid var(--ink-3); border-radius: 3px;
+    margin-top: 2px;
+  }
+
+  .order {
+    list-style: none; padding: 0; margin: 0;
+    counter-reset: step;
+  }
+  .order li {
+    counter-increment: step;
+    padding: 12px 16px 12px 56px; position: relative;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14px;
+  }
+  .order li:last-child { border-bottom: 0; }
+  .order li::before {
+    content: counter(step, decimal-leading-zero);
+    position: absolute; left: 16px; top: 12px;
+    font-family: "Instrument Serif", serif; font-style: italic;
+    font-size: 22px; color: var(--stamp);
+    font-weight: 400;
+  }
+  .order li b { font-weight: 600; }
+  .order li .est {
+    float: right; font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--ink-4);
+  }
+
+  /* foot */
+  .foot {
+    margin-top: 56px; padding-top: 18px; border-top: 4px double var(--ink);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .foot .sig { font-family: "Instrument Serif", serif; font-style: italic; font-size: 22px; }
+  .foot .sig em { color: var(--stamp); }
+  .foot .meta { font-size: 11px; color: var(--ink-4); font-family: "JetBrains Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .twocol { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 880px) { .twocol { grid-template-columns: 1fr; } .summary-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<div class="doc">
+
+  <!-- ========== MAST ========== -->
+  <header class="mast">
+    <div class="mast-row">
+      <div class="mast-title">Pack & Go — <em>Handoff</em></div>
+      <div class="mast-meta">
+        <span><i class="dot"></i>2026.04.27</span>
+        <span>SCOPE · C (TOKENS + HERO + CHECKLISTS)</span>
+        <span>FROM · v3 / Paper & Stamp</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero">
+    <span class="eyebrow">Developer Handoff · for Claude Code</span>
+    <h1 class="display">디자인 v3을, <em>코드</em>로 옮길 차례.</h1>
+    <p class="lede">
+      이 문서는 v3 리뷰(D · Paper & Stamp 팔레트)에서 제안한 변경을
+      <code class="inline">app/globals.css</code> · <code class="inline">HeroSection.tsx</code> ·
+      Pack/Eat/Todo 체크리스트 3개에 정확히 어떻게 반영할지 명세합니다.
+      Claude Code 세션에 통째로 첨부하고, 마지막의 <b>프롬프트 블록</b>을 그대로 붙여 넣으세요.
+    </p>
+
+    <div class="summary-grid">
+      <div class="cell">
+        <div class="label">Scope</div>
+        <div class="val"><em>C</em></div>
+        <div class="sub">tokens + hero + checklists</div>
+      </div>
+      <div class="cell">
+        <div class="label">Files touched</div>
+        <div class="val">5</div>
+        <div class="sub">edit · 1 replace · 0 new</div>
+      </div>
+      <div class="cell">
+        <div class="label">Estimated</div>
+        <div class="val">3–4h</div>
+        <div class="sub">PR-ready, single branch</div>
+      </div>
+      <div class="cell">
+        <div class="label">Risk</div>
+        <div class="val">Low</div>
+        <div class="sub">visual only · no schema</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 0. PRINCIPLES ========== -->
+  <section>
+    <div class="sec-num">§ 00 / PRINCIPLES</div>
+    <h2 class="sec-title">먼저, <em>다섯 줄</em>의 원칙.</h2>
+    <p class="sec-intro">아래 변경 명세는 모두 이 다섯 가지에서 파생됩니다. 만약 명세 중 헷갈리는 부분이 있다면 이 원칙으로 돌아가서 해석해 주세요.</p>
+    <ol style="margin:0; padding-left:22px; font-size:14px; color:var(--ink-2); line-height:1.85;">
+      <li><b>Primary는 잉크 검정</b>. 메인 액션, 본문 텍스트, 사이드바 active는 모두 잉크 톤(<code class="inline">#151513</code> ~ <code class="inline">#2a2824</code>).</li>
+      <li><b>액센트는 스탬프 빨강(<code class="inline">#b54a2b</code>) 한 점만</b>. em 강조 · D-Day · 사이드바 D-N 뱃지 · 진행률 바 · destructive에만.</li>
+      <li><b>주황(<code class="inline">#c2511f</code>)·해 노랑(<code class="inline">#d9a441</code>)·모스그린(<code class="inline">#4a6a3a</code>) 전부 제거</b>. 보조 색은 <code class="inline">--paper-*</code> 베이지 단계로만 만든다.</li>
+      <li><b>히어로 배경은 캠핑 사진</b>. 가독성은 빨강 글로우가 아니라 잉크 그라디언트로 확보.</li>
+      <li><b>D-Day는 흰색</b>, 보조 색 사용 금지. "남은 시간" 자체가 강조.</li>
+    </ol>
+  </section>
+
+  <!-- ========== 1. TOKENS ========== -->
+  <section>
+    <div class="sec-num">§ 01 / TOKENS</div>
+    <h2 class="sec-title">색·폰트 <em>토큰</em> 매핑.</h2>
+    <p class="sec-intro">
+      shadcn은 의미론 토큰(<code class="inline">--primary</code>, <code class="inline">--accent</code>, <code class="inline">--muted</code>...)으로 동작하므로
+      이 단계에서 토큰만 D 팔레트로 갈아끼우면 사이트 전반이 함께 따라옵니다. 컴포넌트 코드는 다음 단계에서 손봐도 늦지 않습니다.
+    </p>
+
+    <table class="tokens" style="margin-top:8px;">
+      <thead>
+        <tr>
+          <th style="width:22%">Token</th>
+          <th style="width:30%">Before (oklch)</th>
+          <th style="width:30%">After (D / Paper & Stamp)</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code class="inline">--background</code></td>
+          <td class="mono"><span class="swatch" style="background:#fff"></span>oklch(1 0 0) <span class="note" style="color:var(--ink-4)">/* white */</span></td>
+          <td class="mono"><span class="swatch" style="background:#f4ecd8"></span>oklch(0.93 0.025 85) <span class="note" style="color:var(--ink-4)">/* paper */</span></td>
+          <td class="note">앱 전체 베이스 — 흰 종이 → <b>오프화이트 종이</b>.</td>
+        </tr>
+        <tr>
+          <td><code class="inline">--foreground</code></td>
+          <td class="mono"><span class="swatch" style="background:#262626"></span>oklch(0.145 0 0)</td>
+          <td class="mono"><span class="swatch" style="background:#1a1a17"></span>oklch(0.16 0.005 80)</td>
+          <td class="note">본문 잉크 — 살짝 따뜻하게.</td>
+        </tr>
+        <tr>
+          <td><code class="inline">--card</code></td>
+          <td class="mono"><span class="swatch" style="background:#fff"></span>oklch(1 0 0)</td>
+          <td class="mono"><span class="swatch" style="background:#fffaef"></span>oklch(0.97 0.018 85)</td>
+          <td class="note">카드는 종이보다 살짝 밝게 — 결이 살아남.</td>
+        </tr>
+        <tr>
+          <td><code class="inline">--primary</code></td>
+          <td class="mono"><span class="swatch" style="background:#363636"></span>oklch(0.205 0 0)</td>
+          <td class="mono"><span class="swatch" style="background:#1a1a17"></span>oklch(0.16 0.005 80)</td>
+          <td class="note">기본 버튼·focus ring — <b>잉크</b>.</td>
+        </tr>
+        <tr>
+          <td><code class="inline">--accent</code></td>
+          <td class="mono"><span class="swatch" style="background:#f7f7f7"></span>oklch(0.97 0 0)</td>
+          <td class="mono"><span class="swatch" style="background:#b54a2b"></span>oklch(0.55 0.15 35)</td>
+          <td class="note"><b>스탬프 빨강</b> — 강조 한 점에만 쓰는 색.</td>
+        </tr>
+        <tr>
+          <td><code class="inline">--accent-foreground</code></td>
+          <td class="mono"><span class="swatch" style="background:#363636"></span>oklch(0.205 0 0)</td>
+          <td class="mono"><span class="swatch" style="background:#fff"></span>oklch(0.985 0 0)</td>
+          <td class="note">accent 위 텍스트 — 흰색.</td>
+        </tr>
+        <tr>
+          <td><code class="inline">--muted</code></td>
+          <td class="mono"><span class="swatch" style="background:#f7f7f7"></span>oklch(0.97 0 0)</td>
+          <td class="mono"><span class="swatch" style="background:#ece4d2"></span>oklch(0.9 0.022 85)</td>
+          <td class="note">베이지 한 단계 — 카테고리 라벨, hover 배경.</td>
+        </tr>
+        <tr>
+          <td><code class="inline">--muted-foreground</code></td>
+          <td class="mono"><span class="swatch" style="background:#888"></span>oklch(0.556 0 0)</td>
+          <td class="mono"><span class="swatch" style="background:#6b6857"></span>oklch(0.45 0.012 80)</td>
+          <td class="note">보조 텍스트 — 따뜻한 회갈색.</td>
+        </tr>
+        <tr>
+          <td><code class="inline">--border</code></td>
+          <td class="mono"><span class="swatch" style="background:#e8e8e8"></span>oklch(0.922 0 0)</td>
+          <td class="mono"><span class="swatch" style="background:#c9be9f"></span>oklch(0.78 0.025 85)</td>
+          <td class="note">테두리 — 종이 결에 어울리는 베이지 라인.</td>
+        </tr>
+        <tr>
+          <td><code class="inline">--destructive</code></td>
+          <td class="mono"><span class="swatch" style="background:#dc2626"></span>oklch(0.577 0.245 27)</td>
+          <td class="mono"><span class="swatch" style="background:#7a2d15"></span>oklch(0.4 0.13 35)</td>
+          <td class="note">취소·삭제 — 스탬프 톤보다 더 어두운 빨강.</td>
+        </tr>
+        <tr>
+          <td><code class="inline">--ring</code></td>
+          <td class="mono"><span class="swatch" style="background:#aaa"></span>oklch(0.708 0 0)</td>
+          <td class="mono"><span class="swatch" style="background:#94907c"></span>oklch(0.6 0.015 80)</td>
+          <td class="note">포커스 링 — 베이지 톤.</td>
+        </tr>
+        <tr>
+          <td><code class="inline">--font-sans</code></td>
+          <td class="mono">Geist Sans</td>
+          <td class="mono">Pretendard <span style="color:var(--ink-4)">+ Geist Sans fallback</span></td>
+          <td class="note">한글 본문 가독성 — Pretendard로 교체.</td>
+        </tr>
+        <tr>
+          <td><code class="inline">--font-heading</code> <span class="note" style="font-family:Pretendard">(신규)</span></td>
+          <td class="mono"><del>(없음)</del></td>
+          <td class="mono">"Noto Serif KR", serif</td>
+          <td class="note">큰 제목용 — D-Day, 캠핑장 이름 등.</td>
+        </tr>
+        <tr>
+          <td><code class="inline">--font-display</code> <span class="note" style="font-family:Pretendard">(신규)</span></td>
+          <td class="mono"><del>(없음)</del></td>
+          <td class="mono">"Instrument Serif", serif</td>
+          <td class="note">이탤릭 강조용 — em 안의 한 단어, 숫자.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- file 1 -->
+    <div class="file">
+      <div class="file-h">
+        <span class="badge replace">REPLACE</span>
+        <span class="path">app/globals.css</span>
+        <span class="scope-tag">:root + .dark + @theme + base</span>
+      </div>
+      <div class="file-body">
+        <p>의미론 토큰 블록만 갈아끼웁니다. <code class="inline">@theme inline</code> 매핑·<code class="inline">@layer base</code>·<code class="inline">--radius-*</code> 스케일은 <b>변경 없음</b>. 다크 모드는 백그라운드만 잉크로 두고 액센트는 동일하게 유지.</p>
+        <pre class="diff"><span class="meta">@@ app/globals.css :root @@</span>
+<span class="del">- --background: oklch(1 0 0);</span>
+<span class="del">- --foreground: oklch(0.145 0 0);</span>
+<span class="del">- --card: oklch(1 0 0);</span>
+<span class="del">- --primary: oklch(0.205 0 0);</span>
+<span class="del">- --accent: oklch(0.97 0 0);</span>
+<span class="del">- --accent-foreground: oklch(0.205 0 0);</span>
+<span class="del">- --muted: oklch(0.97 0 0);</span>
+<span class="del">- --muted-foreground: oklch(0.556 0 0);</span>
+<span class="del">- --border: oklch(0.922 0 0);</span>
+<span class="del">- --destructive: oklch(0.577 0.245 27.325);</span>
+<span class="del">- --ring: oklch(0.708 0 0);</span>
+<span class="add">+ --background: oklch(0.93 0.025 85);   /* paper */</span>
+<span class="add">+ --foreground: oklch(0.16 0.005 80);   /* ink */</span>
+<span class="add">+ --card: oklch(0.97 0.018 85);         /* paper-light */</span>
+<span class="add">+ --primary: oklch(0.16 0.005 80);      /* ink */</span>
+<span class="add">+ --primary-foreground: oklch(0.985 0 0);</span>
+<span class="add">+ --accent: oklch(0.55 0.15 35);        /* stamp red */</span>
+<span class="add">+ --accent-foreground: oklch(0.985 0 0);</span>
+<span class="add">+ --muted: oklch(0.9 0.022 85);         /* paper-2 */</span>
+<span class="add">+ --muted-foreground: oklch(0.45 0.012 80);</span>
+<span class="add">+ --border: oklch(0.78 0.025 85);       /* rule */</span>
+<span class="add">+ --destructive: oklch(0.4 0.13 35);    /* stamp-2 */</span>
+<span class="add">+ --ring: oklch(0.6 0.015 80);</span>
+<span class="ctx">  --secondary: oklch(0.97 0 0);</span><span class="ctx">  /* keep */</span>
+<span class="ctx">  --popover: oklch(1 0 0);</span><span class="ctx">         /* keep */</span>
+<span class="meta">@@ chart-1..5 @@</span>
+<span class="ctx">  /* 차트는 단계 베이지로 — 그래프가 paper 위에서 살아남는다 */</span>
+<span class="add">+ --chart-1: oklch(0.55 0.15 35);   /* stamp accent */</span>
+<span class="add">+ --chart-2: oklch(0.45 0.012 80);  /* ink-3 */</span>
+<span class="add">+ --chart-3: oklch(0.6 0.015 80);   /* ink-4 */</span>
+<span class="add">+ --chart-4: oklch(0.78 0.025 85);  /* rule */</span>
+<span class="add">+ --chart-5: oklch(0.4 0.13 35);    /* stamp-2 */</span>
+</pre>
+        <p>폰트는 <code class="inline">app/layout.tsx</code>에서 import하고 <code class="inline">@theme</code>의 변수 이름을 바꿉니다. 자세한 건 §02.</p>
+      </div>
+    </div>
+
+    <!-- file 1b -->
+    <div class="file">
+      <div class="file-h">
+        <span class="badge edit">EDIT</span>
+        <span class="path">app/globals.css</span>
+        <span class="scope-tag">@theme inline · 폰트 변수</span>
+      </div>
+      <div class="file-body">
+        <p>현재 <code class="inline">--font-sans</code>는 Geist에 묶여 있습니다. Pretendard로 갈아끼우고 heading/display 변수를 신규 추가합니다.</p>
+        <pre class="diff"><span class="meta">@@ @theme inline @@</span>
+<span class="del">- --font-sans: var(--font-geist-sans);</span>
+<span class="del">- --font-mono: var(--font-geist-mono);</span>
+<span class="del">- --font-heading: var(--font-geist-sans);</span>
+<span class="add">+ --font-sans: var(--font-pretendard), var(--font-geist-sans), system-ui, sans-serif;</span>
+<span class="add">+ --font-mono: var(--font-jetbrains-mono), var(--font-geist-mono), monospace;</span>
+<span class="add">+ --font-heading: "Noto Serif KR", var(--font-pretendard), serif;</span>
+<span class="add">+ --font-display: "Instrument Serif", "Noto Serif KR", serif;</span>
+</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 2. LAYOUT (FONTS) ========== -->
+  <section>
+    <div class="sec-num">§ 02 / FONTS</div>
+    <h2 class="sec-title">폰트 <em>주입</em>.</h2>
+    <p class="sec-intro">Pretendard·Noto Serif KR·Instrument Serif·JetBrains Mono를 <code class="inline">next/font/google</code>로 주입합니다. Geist는 fallback으로만 남깁니다.</p>
+
+    <div class="file">
+      <div class="file-h">
+        <span class="badge edit">EDIT</span>
+        <span class="path">app/layout.tsx</span>
+        <span class="scope-tag">font imports</span>
+      </div>
+      <div class="file-body">
+        <pre class="diff"><span class="meta">@@ app/layout.tsx top @@</span>
+<span class="del">- import { Geist, Geist_Mono } from "next/font/google";</span>
+<span class="add">+ import { Geist, Geist_Mono, Noto_Serif_KR, Instrument_Serif, JetBrains_Mono } from "next/font/google";</span>
+<span class="add">+ import localFont from "next/font/local";  // Pretendard</span>
+<span class="ctx"></span>
+<span class="add">+ const pretendard = localFont({</span>
+<span class="add">+   src: "../public/fonts/PretendardVariable.woff2",</span>
+<span class="add">+   variable: "--font-pretendard",</span>
+<span class="add">+   display: "swap",</span>
+<span class="add">+ });</span>
+<span class="add">+ const notoSerifKr = Noto_Serif_KR({ weight: ["400","500","600"], subsets: ["latin"], variable: "--font-noto-serif-kr", display: "swap" });</span>
+<span class="add">+ const instrumentSerif = Instrument_Serif({ weight: "400", style: ["normal","italic"], subsets: ["latin"], variable: "--font-instrument-serif", display: "swap" });</span>
+<span class="add">+ const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono", display: "swap" });</span>
+<span class="ctx"></span>
+<span class="meta">@@ &lt;html className&gt; @@</span>
+<span class="del">- className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}</span>
+<span class="add">+ className={`${pretendard.variable} ${notoSerifKr.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} ${geistSans.variable} ${geistMono.variable} h-full antialiased`}</span>
+</pre>
+        <p style="margin-top:12px; color:var(--ink-3); font-size:12.5px;">
+          ⓘ Pretendard는 Google Fonts에 없으므로 <code class="inline">public/fonts/PretendardVariable.woff2</code>로 로컬 호스팅합니다.
+          파일은 <a href="https://github.com/orioncactus/pretendard/releases" target="_blank" rel="noopener" style="color:var(--stamp);">pretendard releases</a>에서 받아 추가하세요.
+          (없으면 <code class="inline">localFont</code> 줄과 <code class="inline">${pretendard.variable}</code>를 빼고, <code class="inline">--font-sans</code>의 <code class="inline">var(--font-pretendard)</code>도 제거 — 다음 단계에서 Geist만으로도 동작합니다.)
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 3. HERO ========== -->
+  <section>
+    <div class="sec-num">§ 03 / HERO</div>
+    <h2 class="sec-title">히어로 — D-Day는 <em>주인공</em>으로.</h2>
+    <p class="sec-intro">
+      현재 D-Day는 <code class="inline">text-lg</code>로 trip title 옆에 묶여 있습니다.
+      이걸 풀어서 <b>큰 serif 숫자</b>로 띄우고, 메인 CTA "완료"는 잉크 fill로, 캠핑장 카드는 가운데 정렬을 풀고 좌측 정렬로 정돈합니다.
+    </p>
+
+    <div class="file">
+      <div class="file-h">
+        <span class="badge edit">EDIT</span>
+        <span class="path">components/home/HeroSection.tsx</span>
+        <span class="scope-tag">TripHero · D-day 위계</span>
+      </div>
+      <div class="file-body">
+        <p><b>1) D-Day 블록 분리·확대.</b> trip title과 같은 줄에서 빼고, <code class="inline">font-display</code>(Instrument Serif)로 56px 흰색.</p>
+        <pre class="diff"><span class="meta">@@ TripHero return @@</span>
+<span class="ctx">  return (</span>
+<span class="ctx">    &lt;div className="flex flex-col gap-4"&gt;</span>
+<span class="del">-     {/* D-day + 날짜 + 버튼 */}</span>
+<span class="del">-     &lt;div className="flex items-start justify-between"&gt;</span>
+<span class="del">-       &lt;div&gt;</span>
+<span class="del">-         &lt;div className="flex items-baseline gap-3"&gt;</span>
+<span class="del">-           &lt;span className="text-white font-bold text-lg"&gt;{dday}&lt;/span&gt;</span>
+<span class="del">-           &lt;span className="text-white/80 font-semibold text-lg"&gt;{trip.title}&lt;/span&gt;</span>
+<span class="del">-         &lt;/div&gt;</span>
+<span class="del">-       &lt;/div&gt;</span>
+<span class="add">+     {/* D-day는 큰 serif 숫자 — 페이지의 주인공 */}</span>
+<span class="add">+     &lt;div className="flex items-end justify-between gap-6 flex-wrap"&gt;</span>
+<span class="add">+       &lt;div className="flex items-baseline gap-4"&gt;</span>
+<span class="add">+         &lt;span</span>
+<span class="add">+           className="text-white font-display text-[56px] leading-none tracking-tight"</span>
+<span class="add">+           style={{ fontFamily: 'var(--font-display)' }}</span>
+<span class="add">+         &gt;</span>
+<span class="add">+           {dday}</span>
+<span class="add">+         &lt;/span&gt;</span>
+<span class="add">+         &lt;div className="flex flex-col gap-0.5"&gt;</span>
+<span class="add">+           &lt;span className="text-white/95 font-semibold text-lg leading-tight"&gt;{trip.title}&lt;/span&gt;</span>
+<span class="add">+           &lt;span className="text-white/70 text-xs font-mono tracking-wider"&gt;</span>
+<span class="add">+             {startFmt}{endFmt && ` — ${endFmt}`}</span>
+<span class="add">+           &lt;/span&gt;</span>
+<span class="add">+         &lt;/div&gt;</span>
+<span class="add">+       &lt;/div&gt;</span>
+</pre>
+        <p style="margin-top:14px;"><b>2) 메인 CTA "완료" 버튼 → 잉크 fill.</b> 흰 반투명 fill을 잉크 검정 fill + 흰 텍스트로.</p>
+        <pre class="diff"><span class="meta">@@ split button (완료) @@</span>
+<span class="del">- &lt;div className="flex items-center rounded-md overflow-hidden border border-white/30"&gt;</span>
+<span class="del">-   &lt;button</span>
+<span class="del">-     onClick={handleComplete}</span>
+<span class="del">-     ...</span>
+<span class="del">-     className="h-8 px-3 text-xs font-medium bg-white/20 text-white hover:bg-white/30 ..."</span>
+<span class="del">-   &gt;</span>
+<span class="del">-     완료</span>
+<span class="del">-   &lt;/button&gt;</span>
+<span class="del">-   &lt;div className="w-px h-4 bg-white/30" /&gt;</span>
+<span class="del">-   &lt;DropdownMenuTrigger</span>
+<span class="del">-     ...</span>
+<span class="del">-     className="h-8 px-1.5 bg-white/20 text-white hover:bg-white/30 ..."</span>
+<span class="del">-   &gt;</span>
+<span class="add">+ &lt;div className="flex items-center rounded-md overflow-hidden bg-foreground/95 border border-foreground"&gt;</span>
+<span class="add">+   &lt;button</span>
+<span class="add">+     onClick={handleComplete}</span>
+<span class="add">+     ...</span>
+<span class="add">+     className="h-8 px-4 text-xs font-medium text-background hover:bg-foreground transition-colors disabled:opacity-50"</span>
+<span class="add">+   &gt;</span>
+<span class="add">+     완료</span>
+<span class="add">+   &lt;/button&gt;</span>
+<span class="add">+   &lt;div className="w-px h-4 bg-background/25" /&gt;</span>
+<span class="add">+   &lt;DropdownMenuTrigger</span>
+<span class="add">+     ...</span>
+<span class="add">+     className="h-8 px-1.5 text-background hover:bg-foreground transition-colors disabled:opacity-50 flex items-center"</span>
+<span class="add">+   &gt;</span>
+</pre>
+        <p style="margin-top:14px;"><b>3) "새 캠핑 등록" 버튼 → 라인 only.</b> 흰 반투명 fill 제거, ghost outline.</p>
+        <pre class="diff"><span class="del">- className="h-8 bg-white/20 text-white border-white/30 hover:bg-white/30 text-xs"</span>
+<span class="add">+ className="h-8 bg-transparent text-white border border-white/40 hover:bg-white/10 hover:border-white/60 text-xs"</span>
+</pre>
+      </div>
+    </div>
+
+    <div class="file">
+      <div class="file-h">
+        <span class="badge edit">EDIT</span>
+        <span class="path">components/home/HeroSection.tsx</span>
+        <span class="scope-tag">SiteCard · 정렬 + 사이즈</span>
+      </div>
+      <div class="file-body">
+        <p>현재 <code class="inline">SiteCard</code>는 가운데 정렬에 본문 글자(<code class="inline">text-2xl</code>)가 너무 큽니다. 좌측 정렬 + 한 단계 다운, <code class="inline">w-fit min-w-80</code>도 좀 더 차분하게.</p>
+        <pre class="diff"><span class="meta">@@ SiteCard return @@</span>
+<span class="del">- className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4 w-fit min-w-80 max-w-[32rem] cursor-pointer hover:bg-white/20 transition-colors"&gt;</span>
+<span class="del">- &lt;p className="text-white/80 text-2xl font-bold mb-0.5 text-center"&gt;</span>
+<span class="del">-   {startFmt}</span>
+<span class="del">-   {endFmt && ` ~ ${endFmt}`}</span>
+<span class="del">- &lt;/p&gt;</span>
+<span class="del">- &lt;h3 className="text-white font-bold text-2xl leading-tight mb-3 text-center"&gt;{site.site.name}&lt;/h3&gt;</span>
+<span class="add">+ className="bg-white/8 backdrop-blur-sm border border-white/20 rounded-xl p-3.5 flex-1 min-w-[14rem] max-w-[20rem] cursor-pointer hover:bg-white/15 transition-colors"&gt;</span>
+<span class="add">+ &lt;p className="text-white/70 font-mono text-[10px] tracking-wider uppercase mb-1"&gt;</span>
+<span class="add">+   {startFmt}{endFmt && ` — ${endFmt}`}</span>
+<span class="add">+ &lt;/p&gt;</span>
+<span class="add">+ &lt;h3 className="text-white font-medium text-[17px] leading-tight mb-2"</span>
+<span class="add">+     style={{ fontFamily: 'var(--font-heading)' }}&gt;{site.site.name}&lt;/h3&gt;</span>
+</pre>
+        <p style="margin-top:14px;">하단 메타 라인의 글자도 한 단계 줄이고, 흰색 비율을 살짝 떨어뜨려 잉크와의 콘트라스트를 유지합니다.</p>
+        <pre class="diff"><span class="del">- &lt;div className="flex flex-col gap-1.5 text-xs text-white/80"&gt;</span>
+<span class="add">+ &lt;div className="flex flex-col gap-1 text-[11px] text-white/75"&gt;</span>
+</pre>
+      </div>
+    </div>
+
+    <div class="file">
+      <div class="file-h">
+        <span class="badge edit">EDIT</span>
+        <span class="path">components/home/HeroSection.tsx</span>
+        <span class="scope-tag">overlay · sites layout</span>
+      </div>
+      <div class="file-body">
+        <p>오버레이를 단순 검정 → <b>잉크 그라디언트</b>로 (사진 본연의 색이 살아남), 캠핑장 카드 영역을 <code class="inline">flex-wrap justify-center</code> → <code class="inline">flex-nowrap</code>의 가로 균등 배치로.</p>
+        <pre class="diff"><span class="meta">@@ HeroSection · overlay @@</span>
+<span class="del">- &lt;div className="absolute inset-0 bg-black/45" /&gt;</span>
+<span class="add">+ &lt;div</span>
+<span class="add">+   className="absolute inset-0 pointer-events-none"</span>
+<span class="add">+   style={{</span>
+<span class="add">+     background:</span>
+<span class="add">+       'linear-gradient(180deg, rgba(21,21,19,0.18) 0%, rgba(21,21,19,0.55) 55%, rgba(21,21,19,0.92) 100%), ' +</span>
+<span class="add">+       'linear-gradient(110deg, rgba(21,21,19,0.72) 0%, rgba(21,21,19,0.10) 65%)',</span>
+<span class="add">+   }}</span>
+<span class="add">+ /&gt;</span>
+<span class="meta">@@ TripHero · sites @@</span>
+<span class="del">- &lt;div className="flex gap-3 flex-wrap justify-center"&gt;</span>
+<span class="add">+ &lt;div className="flex gap-3 flex-wrap"&gt;  {/* 카드 자체가 flex-1로 균등 분할 */}</span>
+</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 4. PACK ========== -->
+  <section>
+    <div class="sec-num">§ 04 / PACK · EAT</div>
+    <h2 class="sec-title">체크리스트 — 네이티브를 <em>shadcn</em>으로.</h2>
+    <p class="sec-intro">
+      <code class="inline">PackChecklist</code>·<code class="inline">EatChecklist</code>의 native <code class="inline">&lt;input type="checkbox"&gt;</code>를
+      shadcn <code class="inline">&lt;Checkbox&gt;</code>로 교체합니다. 동시에 헤더에 <b>총 무게 stat</b>과 <b>진행률 바</b>를 얹어 정보 위계를 정돈.
+    </p>
+
+    <div class="file">
+      <div class="file-h">
+        <span class="badge edit">EDIT</span>
+        <span class="path">components/home/PackChecklist.tsx</span>
+        <span class="scope-tag">header stat + Checkbox</span>
+      </div>
+      <div class="file-body">
+        <p><b>1) 헤더 위계 정돈.</b> 한 줄에 다 박힌 정보를 <i>제목 / 진행률 + 무게 / 바</i> 3단으로 풀어줍니다.</p>
+        <pre class="diff"><span class="meta">@@ PackChecklist header @@</span>
+<span class="del">- &lt;div className="flex items-center justify-between px-4 py-3 border-b"&gt;</span>
+<span class="del">-   &lt;h2 className="font-semibold text-sm"&gt;Pack&lt;/h2&gt;</span>
+<span class="del">-   &lt;div className="flex items-center gap-2 text-xs text-muted-foreground"&gt;</span>
+<span class="del">-     &lt;span&gt;{checkedCount}/{packWithGear.length}&lt;/span&gt;</span>
+<span class="del">-     {totalWeightG > 0 && &lt;span&gt;{formatWeight(totalWeightG)}&lt;/span&gt;}</span>
+<span class="del">-   &lt;/div&gt;</span>
+<span class="del">- &lt;/div&gt;</span>
+<span class="add">+ &lt;div className="px-4 pt-3 pb-2 border-b space-y-2"&gt;</span>
+<span class="add">+   &lt;div className="flex items-baseline justify-between"&gt;</span>
+<span class="add">+     &lt;h2 className="font-semibold text-sm tracking-tight"&gt;Pack&lt;/h2&gt;</span>
+<span class="add">+     &lt;div className="flex items-baseline gap-2 text-[11px] font-mono text-muted-foreground tabular-nums"&gt;</span>
+<span class="add">+       &lt;span&gt;</span>
+<span class="add">+         &lt;span className="text-foreground font-semibold"&gt;{checkedCount}&lt;/span&gt;</span>
+<span class="add">+         /{packWithGear.length}</span>
+<span class="add">+       &lt;/span&gt;</span>
+<span class="add">+       {totalWeightG &gt; 0 && (</span>
+<span class="add">+         &lt;span className="text-muted-foreground"&gt;· {formatWeight(totalWeightG)}&lt;/span&gt;</span>
+<span class="add">+       )}</span>
+<span class="add">+     &lt;/div&gt;</span>
+<span class="add">+   &lt;/div&gt;</span>
+<span class="add">+   {packWithGear.length &gt; 0 && (</span>
+<span class="add">+     &lt;div className="h-1 bg-muted rounded-full overflow-hidden"&gt;</span>
+<span class="add">+       &lt;div</span>
+<span class="add">+         className="h-full bg-accent rounded-full transition-all"</span>
+<span class="add">+         style={{ width: `${(checkedCount / packWithGear.length) * 100}%` }}</span>
+<span class="add">+       /&gt;</span>
+<span class="add">+     &lt;/div&gt;</span>
+<span class="add">+   )}</span>
+<span class="add">+ &lt;/div&gt;</span>
+</pre>
+
+        <p style="margin-top:14px;"><b>2) Checkbox 교체.</b></p>
+        <pre class="diff"><span class="meta">@@ PackRow · imports @@</span>
+<span class="add">+ import { Checkbox } from '@/components/ui/checkbox'</span>
+<span class="meta">@@ PackRow body @@</span>
+<span class="del">- &lt;input</span>
+<span class="del">-   type="checkbox"</span>
+<span class="del">-   className="rounded border-muted-foreground cursor-pointer"</span>
+<span class="del">-   checked={isChecked}</span>
+<span class="del">-   onChange={onToggle}</span>
+<span class="del">- /&gt;</span>
+<span class="add">+ &lt;Checkbox</span>
+<span class="add">+   checked={isChecked}</span>
+<span class="add">+   onCheckedChange={onToggle}</span>
+<span class="add">+   className="data-[state=checked]:bg-foreground data-[state=checked]:border-foreground"</span>
+<span class="add">+ /&gt;</span>
+</pre>
+        <p style="margin-top:8px; color:var(--ink-3); font-size:12.5px;">
+          ⓘ shadcn Checkbox가 아직 없다면 <code class="inline">npx shadcn@latest add checkbox</code>로 설치하세요.
+        </p>
+
+        <p style="margin-top:14px;"><b>3) 카테고리 라벨 작은 손질.</b> 베이지 라인 위에 sm-caps mono로 — 신문/노트 톤을 더 살림.</p>
+        <pre class="diff"><span class="meta">@@ category label @@</span>
+<span class="del">- &lt;span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide"&gt;</span>
+<span class="del">-   {category}</span>
+<span class="del">- &lt;/span&gt;</span>
+<span class="del">- &lt;div className="border-b mt-1" /&gt;</span>
+<span class="add">+ &lt;div className="flex items-center gap-3"&gt;</span>
+<span class="add">+   &lt;span className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em] shrink-0"&gt;</span>
+<span class="add">+     {category}</span>
+<span class="add">+   &lt;/span&gt;</span>
+<span class="add">+   &lt;div className="flex-1 border-b border-dashed border-border" /&gt;</span>
+<span class="add">+   &lt;span className="text-[10px] font-mono text-muted-foreground tabular-nums shrink-0"&gt;</span>
+<span class="add">+     {items.filter(i =&gt; checkedGearIds.includes(i.gearId)).length}/{items.length}</span>
+<span class="add">+   &lt;/span&gt;</span>
+<span class="add">+ &lt;/div&gt;</span>
+</pre>
+      </div>
+    </div>
+
+    <div class="file">
+      <div class="file-h">
+        <span class="badge edit">EDIT</span>
+        <span class="path">components/home/EatChecklist.tsx</span>
+        <span class="scope-tag">동일 패턴 적용</span>
+      </div>
+      <div class="file-body">
+        <p>EatChecklist도 PackChecklist와 동일한 헤더/Checkbox/카테고리 패턴을 적용합니다. 중복 코드가 보이면 <code class="inline">components/home/_ChecklistShell.tsx</code>로 추출해도 좋고, 이번 PR에서는 단순 복제로 가도 무방.</p>
+        <ul>
+          <li>총 무게 stat → <b>총 식재료 개수</b> 또는 <b>예상 비용 합계</b>로 의미만 바꾸기 (도메인은 그대로).</li>
+          <li>진행률 바 색은 동일 — <code class="inline">bg-accent</code>.</li>
+          <li>Checkbox · 카테고리 라벨 패턴은 그대로.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="file">
+      <div class="file-h">
+        <span class="badge edit">EDIT</span>
+        <span class="path">components/home/TodoList.tsx</span>
+        <span class="scope-tag">native checkbox → shadcn</span>
+      </div>
+      <div class="file-body">
+        <p>TodoList도 헤더는 Pack과 동일 패턴(이름 / N/M / 진행률 바). 항목 row의 native checkbox만 shadcn Checkbox로 갈아끼우면 충분합니다. 추가 stat은 Todo의 경우 굳이 필요 없음.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 5. PAGE ========== -->
+  <section>
+    <div class="sec-num">§ 05 / PAGE</div>
+    <h2 class="sec-title">3열 비율 — <em>1.4 / 1.1 / 1</em>.</h2>
+    <p class="sec-intro">
+      홈의 3열은 현재 균등 grid입니다. 정보 밀도가 다르므로 <b>Pack(가장 길다) : Eat : Todo = 1.4 : 1.1 : 1</b>로 비대칭 비율을 줍니다.
+    </p>
+
+    <div class="file">
+      <div class="file-h">
+        <span class="badge edit">EDIT</span>
+        <span class="path">app/(main)/page.tsx</span>
+        <span class="scope-tag">grid columns</span>
+      </div>
+      <div class="file-body">
+        <pre class="diff"><span class="meta">@@ HomePage @@</span>
+<span class="del">- &lt;div className="grid grid-cols-1 md:grid-cols-3 gap-4"&gt;</span>
+<span class="add">+ &lt;div className="grid grid-cols-1 md:grid-cols-[1.4fr_1.1fr_1fr] gap-4"&gt;</span>
+</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 6. ORDER ========== -->
+  <section>
+    <div class="sec-num">§ 06 / ORDER OF OPERATIONS</div>
+    <h2 class="sec-title">작업 <em>순서</em>.</h2>
+    <p class="sec-intro">아래 순서대로 가면 각 단계마다 앱이 깨지지 않고 렌더됩니다. 단계 끝마다 dev 서버에서 확인.</p>
+    <ol class="order">
+      <li><span class="est">~20m</span><b>토큰 교체</b> · <code class="inline">app/globals.css</code> :root + .dark + chart-* 스왑. 이 단계만으로도 앱 전체 톤이 한 번에 변합니다.</li>
+      <li><span class="est">~25m</span><b>폰트 주입</b> · <code class="inline">app/layout.tsx</code> + <code class="inline">@theme</code>의 폰트 변수. Pretendard woff2 추가 (없으면 fallback으로).</li>
+      <li><span class="est">~45m</span><b>HeroSection</b> · D-Day 분리·확대, 잉크 fill CTA, 라인 ghost CTA, 잉크 그라디언트 오버레이.</li>
+      <li><span class="est">~30m</span><b>SiteCard</b> · 좌측 정렬, 사이즈 다운, mono 메타.</li>
+      <li><span class="est">~40m</span><b>PackChecklist</b> · 헤더 위계 + 진행률 바 + shadcn Checkbox + 카테고리 라벨.</li>
+      <li><span class="est">~25m</span><b>EatChecklist</b> · Pack과 동일 패턴 미러링.</li>
+      <li><span class="est">~15m</span><b>TodoList</b> · 헤더 + Checkbox 교체.</li>
+      <li><span class="est">~5m</span><b>page.tsx</b> · 3열 비율 변경.</li>
+      <li><span class="est">~10m</span><b>리뷰</b> · 다음 절의 검증 체크리스트로 한 번 훑고 PR.</li>
+    </ol>
+  </section>
+
+  <!-- ========== 7. CHECKLIST ========== -->
+  <section>
+    <div class="sec-num">§ 07 / VERIFY</div>
+    <h2 class="sec-title">검증 <em>체크리스트</em>.</h2>
+    <p class="sec-intro">PR 올리기 전에 dev 서버에서 다음을 확인:</p>
+    <ul class="checklist">
+      <li>홈 배경이 흰색 → 페이퍼 베이지로 바뀌었다</li>
+      <li>본문 폰트가 Pretendard로 렌더된다</li>
+      <li>D-Day가 큰 serif 숫자로 떠 있다</li>
+      <li>D-Day 옆에 빨간 점이 <b>없다</b></li>
+      <li>"완료" 버튼이 잉크 검정 + 흰 텍스트다</li>
+      <li>"새 캠핑 등록"은 라인 ghost다</li>
+      <li>히어로 우상단에 빨강 글로우가 <b>없다</b></li>
+      <li>SiteCard가 좌측 정렬이고 두 카드 크기가 비슷하다</li>
+      <li>Pack 헤더에 진행률 바가 있다</li>
+      <li>Pack 진행률 바 색이 스탬프 빨강이다</li>
+      <li>Eat·Todo 모두 동일 헤더 패턴이다</li>
+      <li>모든 체크박스가 shadcn 스타일이다 (체크 시 잉크 fill)</li>
+      <li>카테고리 라벨이 mono small-caps + dashed line이다</li>
+      <li>3열 비율이 Pack 쪽이 가장 넓다</li>
+      <li>다크 모드에서도 무너지지 않는다 (액센트는 동일)</li>
+      <li>destructive 버튼·텍스트가 빨강이다</li>
+    </ul>
+  </section>
+
+  <!-- ========== 8. PROMPT ========== -->
+  <section>
+    <div class="sec-num">§ 08 / CLAUDE CODE PROMPT</div>
+    <h2 class="sec-title">붙여 넣을 <em>한 덩어리</em>.</h2>
+    <p class="sec-intro">이 핸드오프 문서를 첨부하면서, 아래를 그대로 Claude Code 프롬프트로 사용하세요.</p>
+
+    <div class="prompt"><h4>// pack-and-go · D palette migration · scope C</h4>첨부한 핸드오프 문서(Pack and Go - Claude Code Handoff (C scope).html)를
+끝까지 읽고, 거기 명세된 대로 다음 변경을 한 번에 적용해줘.
+
+[범위]
+- app/globals.css       (토큰 + 폰트 변수)
+- app/layout.tsx        (next/font 추가)
+- components/home/HeroSection.tsx
+- components/home/PackChecklist.tsx
+- components/home/EatChecklist.tsx
+- components/home/TodoList.tsx
+- app/(main)/page.tsx
+
+[원칙 — 충돌 시 이 우선순위로]
+1. Primary는 잉크 검정 (var(--foreground) / oklch(0.16 0.005 80)).
+2. 액센트는 스탬프 빨강 (var(--accent) / oklch(0.55 0.15 35)) — em 강조,
+   D-Day는 제외(흰색), 진행률 바, destructive에만.
+3. 주황·해 노랑·모스그린 전부 제거.
+4. 히어로는 캠핑 사진 + 잉크 그라디언트만.
+5. native input[type=checkbox]는 shadcn Checkbox로 교체.
+
+[작업 순서]
+핸드오프 문서 § 06의 9단계를 그대로 따라가. 각 단계 끝에서
+ - npm run typecheck (또는 tsc --noEmit) 통과
+ - npm run lint 통과
+를 확인하고 다음 단계로.
+
+[제약]
+- 데이터 스키마/API/zustand 스토어/hooks는 건드리지 않음 — 시각만.
+- 기존 키보드 접근성 유지 (Checkbox는 shadcn 기본이 OK).
+- Pretendard woff2가 public/fonts에 없으면 localFont 줄을 빼고
+  Geist Sans fallback만으로 동작하게 두고, README에 수동 추가 안내 한 줄.
+
+[검증]
+끝나면 § 07의 16개 체크리스트를 자체 점검한 결과를
+ - ✅/❌ 표 한 장
+ - 변경된 파일 목록
+ - 새로 추가한 의존성 (있다면)
+순으로 요약해 보고해줘.</div>
+  </section>
+
+  <!-- foot -->
+  <footer class="foot">
+    <div class="sig"><em>Paper</em> & Stamp · v3 → code</div>
+    <div class="meta">Pack & Go · Handoff C · 2026.04.27</div>
+  </footer>
+
+</div>
+</body>
+</html>
