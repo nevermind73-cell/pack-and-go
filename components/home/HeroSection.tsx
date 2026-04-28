@@ -20,7 +20,6 @@ import { useShoppingStore } from '@/stores/shoppingStore'
 import { NewTripDialog } from './NewTripDialog'
 import { EditTripDialog } from './EditTripDialog'
 
-// 캠핑 배경 이미지 (Unsplash CDN)
 const CAMPING_PHOTOS = [
   'photo-1504280390367-361c6d9f38f4',
   'photo-1527721023685-b7a6e2af95aa',
@@ -62,20 +61,21 @@ function SiteCard({ site, onClick }: SiteCardProps) {
   return (
     <div
       onClick={onClick}
-      className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4 w-full md:w-fit md:min-w-80 md:max-w-[32rem] cursor-pointer hover:bg-white/20 transition-colors flex flex-col justify-center"
+      className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4 flex-1 min-w-[14rem] max-w-[20rem] cursor-pointer hover:bg-white/20 transition-colors flex flex-col justify-center"
     >
-      <p className="text-white/80 text-2xl font-bold mb-0.5 text-center">
+      <p className="text-white/70 text-xs font-mono mb-0.5">
         {startFmt}
-        {endFmt && ` ~ ${endFmt}`}
+        {endFmt && ` – ${endFmt}`}
       </p>
-      <h3 className="text-white font-bold text-2xl leading-tight mb-3 text-center">{site.site.name}</h3>
+      <h3 className="text-white font-bold text-lg leading-tight mb-3">{site.site.name}</h3>
 
-      <div className="flex flex-col gap-1.5 text-xs text-white/80">
+      <div className="flex flex-col gap-1.5 text-xs font-mono text-white/80">
         <a
           href={naverMapUrl(site.site.name)}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 hover:text-white transition-colors"
+          onClick={(e) => e.stopPropagation()}
         >
           <MapPin className="h-3 w-3 shrink-0" />
           <span className="truncate">{site.site.address ?? site.site.region ?? '지도 보기'}</span>
@@ -120,7 +120,7 @@ function WeatherStrip({ trip }: { trip: Trip }) {
   if (!lat || !lng) return null
 
   return (
-    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 flex gap-3 overflow-x-auto items-center w-full md:w-auto">
+    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 flex gap-3 overflow-x-auto items-center w-full md:w-auto self-stretch">
       {campingDates.map((date) => {
         const weather = forecastMap.get(date)
         const d = new Date(date)
@@ -159,10 +159,6 @@ function WeatherStrip({ trip }: { trip: Trip }) {
   )
 }
 
-interface HeroSectionProps {
-  onNewTrip: () => void
-}
-
 function TripHero({ trip, onNewTrip, onEdit }: { trip: Trip; onNewTrip: () => void; onEdit: () => void }) {
   const qc = useQueryClient()
   const updateTrip = useUpdateTrip()
@@ -172,7 +168,6 @@ function TripHero({ trip, onNewTrip, onEdit }: { trip: Trip; onNewTrip: () => vo
   const { clear: clearShopping, clearCommitted: clearShoppingCommitted } = useShoppingStore()
 
   function clearAllState() {
-    // 캐시 즉시 null → PackChecklist/EatChecklist가 빈 화면으로 즉시 전환
     qc.setQueryData(['current-trip'], null)
     clearGearChecks()
     clearIngredientChecks()
@@ -204,45 +199,41 @@ function TripHero({ trip, onNewTrip, onEdit }: { trip: Trip; onNewTrip: () => vo
   }
 
   const dday = calcDDay(trip.start_date)
-  const startFmt = formatDate(trip.start_date)
-  const endFmt = trip.end_date ? formatDate(trip.end_date) : null
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* D-day + 날짜 + 버튼 */}
+    <div className="flex flex-col gap-4 h-full">
+      {/* 상단: D-day + 제목 + 버튼 */}
       <div className="flex items-start justify-between">
         <div>
-          <div className="flex items-baseline gap-3">
-            <span className="text-white font-bold text-lg">{dday}</span>
-            <span className="text-white/80 font-semibold text-lg">{trip.title}</span>
-          </div>
+          <span className="text-white font-display text-[56px] leading-none block">{dday}</span>
+          <span className="text-white/80 font-semibold text-base mt-0.5 block">{trip.title}</span>
         </div>
 
-        <div className="flex items-center gap-2 mt-1">
+        {/* 버튼 */}
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             size="sm"
-            variant="secondary"
-            className="h-8 bg-white/20 text-white border-white/30 hover:bg-white/30 text-xs"
+            variant="outline"
+            className="h-8 bg-transparent text-white border border-white/40 hover:bg-white/10 hover:text-white text-xs"
             onClick={onNewTrip}
           >
             <Plus className="h-3.5 w-3.5 mr-1" />
             새 캠핑 등록
           </Button>
 
-          {/* 스플릿 버튼: 왼쪽=즉시 완료, 오른쪽=드롭다운(취소) */}
-          <div className="flex items-center rounded-md overflow-hidden border border-white/30">
+          <div className="flex items-center rounded-md overflow-hidden border border-foreground/80">
             <button
               onClick={handleComplete}
               disabled={updateTrip.isPending}
-              className="h-8 px-3 text-xs font-medium bg-white/20 text-white hover:bg-white/30 transition-colors disabled:opacity-50"
+              className="h-8 px-3 text-xs font-medium bg-foreground/95 text-background hover:bg-foreground transition-colors disabled:opacity-50"
             >
               완료
             </button>
-            <div className="w-px h-4 bg-white/30" />
+            <div className="w-px h-4 bg-background/30" />
             <DropdownMenu>
               <DropdownMenuTrigger
                 disabled={updateTrip.isPending}
-                className="h-8 px-1.5 bg-white/20 text-white hover:bg-white/30 transition-colors disabled:opacity-50 flex items-center"
+                className="h-8 px-1.5 bg-foreground/95 text-background hover:bg-foreground transition-colors disabled:opacity-50 flex items-center"
               >
                 <ChevronDown className="h-3.5 w-3.5" />
               </DropdownMenuTrigger>
@@ -259,9 +250,9 @@ function TripHero({ trip, onNewTrip, onEdit }: { trip: Trip; onNewTrip: () => vo
         </div>
       </div>
 
-      {/* 캠핑장 카드 + 날씨 카드 한 줄 (모바일은 세로 스택) */}
+      {/* 중앙: 캠핑장 카드 + 날씨 */}
       {trip.trip_sites.length > 0 && (
-        <div className="flex flex-col md:flex-row gap-3 items-stretch justify-center">
+        <div className="flex-1 flex flex-col md:flex-row items-stretch justify-center gap-3">
           <div className="flex gap-3 flex-wrap justify-center w-full md:w-auto">
             {[...trip.trip_sites]
               .sort((a, b) => a.sort_order - b.sort_order)
@@ -305,17 +296,17 @@ export function HeroSection() {
   return (
     <>
       <div
-        className="relative -mx-6 -mt-6 mb-6 px-6 py-8 bg-cover bg-center min-h-52"
+        className="relative -mx-6 -mt-6 mb-6 px-6 pt-5 pb-6 bg-cover bg-center min-h-[240px] flex flex-col"
         style={{ backgroundImage: bgPhoto ? `url(${bgPhoto})` : undefined }}
       >
-        {/* 어두운 오버레이 */}
-        <div className="absolute inset-0 bg-black/45" />
+        {/* 잉크 그라디언트 오버레이 */}
+        <div className="absolute inset-0 bg-gradient-to-br from-foreground/65 via-foreground/45 to-foreground/20" />
 
-        <div className="relative z-10">
+        <div className="relative z-10 flex-1 flex flex-col">
           {isLoading ? (
             <div className="space-y-3">
-              <Skeleton className="h-6 w-32 bg-white/20" />
-              <Skeleton className="h-10 w-48 bg-white/20" />
+              <Skeleton className="h-14 w-32 bg-white/20" />
+              <Skeleton className="h-5 w-48 bg-white/20" />
             </div>
           ) : trip ? (
             <TripHero trip={trip} onNewTrip={() => setNewTripOpen(true)} onEdit={() => setEditOpen(true)} />
