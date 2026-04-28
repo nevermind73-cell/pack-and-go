@@ -78,7 +78,10 @@ export function useUpdateGear() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['gear'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['gear'] })
+      qc.invalidateQueries({ queryKey: ['gear-groups'] })
+    },
   })
 }
 
