@@ -61,7 +61,7 @@ function SiteCard({ site, onClick }: SiteCardProps) {
   return (
     <div
       onClick={onClick}
-      className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4 flex-1 min-w-[14rem] max-w-[20rem] cursor-pointer hover:bg-white/20 transition-colors flex flex-col justify-center"
+      className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4 w-full md:flex-1 md:min-w-[14rem] md:max-w-[20rem] cursor-pointer hover:bg-white/20 transition-colors flex flex-col justify-center"
     >
       <p className="text-white/70 text-xs font-mono mb-0.5">
         {startFmt}
