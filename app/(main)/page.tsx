@@ -16,7 +16,7 @@ export default function HomePage() {
       <HeroSection />
 
       {/* 체크리스트 3열 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1.1fr_1fr] gap-4">
         <PackChecklist />
         <EatChecklist />
 
