@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCreateGearGroup, useAddGearToGroup } from '@/hooks/useGear'
 import type { PackItem } from '@/stores/packStore'
 
@@ -25,6 +26,7 @@ export function SaveListDialog({ open, onOpenChange, packItems }: SaveListDialog
   const [name, setName] = useState('')
   const createGroup = useCreateGearGroup()
   const addToGroup = useAddGearToGroup()
+  const qc = useQueryClient()
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -39,6 +41,8 @@ export function SaveListDialog({ open, onOpenChange, packItems }: SaveListDialog
           )
         )
       }
+      // 모든 아이템 추가 완료 후 강제 재조회 (타이밍 이슈 방지)
+      await qc.refetchQueries({ queryKey: ['gear-groups'] })
       toast.success(`"${name.trim()}" 리스트가 저장되었습니다.`)
       setName('')
       onOpenChange(false)
