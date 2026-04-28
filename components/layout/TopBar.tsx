@@ -83,7 +83,7 @@ export function TopBar({ user }: TopBarProps) {
           >
             <Menu size={20} />
           </SheetTrigger>
-          <SheetContent side="left" className="w-56 p-0" style={{ backgroundColor: INK }}>
+          <SheetContent side="left" className="w-56 p-0 !bg-[#151513] !border-[#2e2925] !text-[#ece4d2]">
             <SheetTitle className="sr-only">Navigation</SheetTitle>
             {/* 브랜드 마크 */}
             <div className="flex items-center gap-2.5 px-4 py-5">
