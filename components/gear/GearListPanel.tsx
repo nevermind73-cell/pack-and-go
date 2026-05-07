@@ -266,7 +266,17 @@ export function GearListPanel() {
       if (!map.has(cat)) map.set(cat, [])
       map.get(cat)!.push(gear)
     }
-    return map
+    // MISC / 기타 계열은 항상 마지막
+    const LAST = ['misc', '기타', 'etc', 'other', 'others']
+    const sorted = new Map(
+      [...map.entries()].sort(([a], [b]) => {
+        const aLast = LAST.includes(a.toLowerCase())
+        const bLast = LAST.includes(b.toLowerCase())
+        if (aLast !== bLast) return aLast ? 1 : -1
+        return a.localeCompare(b, 'ko')
+      })
+    )
+    return sorted
   }, [filteredGear])
 
   function isCategoryOpen(cat: string) {
