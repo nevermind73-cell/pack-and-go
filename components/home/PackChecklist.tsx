@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { X } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Checkbox } from '@/components/ui/checkbox'
 import { usePackStore } from '@/stores/packStore'
@@ -59,7 +60,9 @@ export function PackChecklist() {
   function handleRemove(gearId: string) {
     if (trip) {
       const next = sourceItems.filter((i) => i.gearId !== gearId)
-      updateTrip.mutate({ id: trip.id, pack_items: next })
+      updateTrip.mutate({ id: trip.id, pack_items: next }, {
+        onError: (err) => toast.error(err instanceof Error ? err.message : '삭제 실패'),
+      })
     } else {
       removeCommitted(gearId)
     }

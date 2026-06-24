@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useSites, SITE_TYPES } from '@/hooks/useSites'
-import { useCreateTrip } from '@/hooks/useTrips'
+import { useCreateTrip, useCurrentTrip } from '@/hooks/useTrips'
 import { usePackStore } from '@/stores/packStore'
 import { useShoppingStore } from '@/stores/shoppingStore'
 
@@ -70,9 +70,10 @@ interface NewTripDialogProps {
 
 export function NewTripDialog({ open, onOpenChange }: NewTripDialogProps) {
   const { data: allSites = [] } = useSites()
+  const { data: currentTrip } = useCurrentTrip()
   const createTrip = useCreateTrip()
-  const { committedItems } = usePackStore()
-  const { committedRecipeIds } = useShoppingStore()
+  const { committedItems, clearCommitted: clearPackCommitted } = usePackStore()
+  const { committedRecipeIds, clearCommitted: clearShoppingCommitted } = useShoppingStore()
 
   const [title, setTitle] = useState('')
   const [entries, setEntries] = useState<SiteEntry[]>([newEntry()])
@@ -150,9 +151,14 @@ export function NewTripDialog({ open, onOpenChange }: NewTripDialogProps) {
           end_date: addDays(e.start_date, e.nights) || undefined,
           sort_order: i,
         })),
-        pack_items: committedItems.length > 0 ? committedItems : undefined,
-        shopping_recipe_ids: committedRecipeIds.length > 0 ? committedRecipeIds : undefined,
+        // 기존 여행이 없는 상태에서 미리 준비해 둔 pack/shopping만 이전
+        // 여행이 활성화된 상태에서 새 여행을 등록할 경우엔 빈 상태로 시작
+        pack_items: (!currentTrip && committedItems.length > 0) ? committedItems : undefined,
+        shopping_recipe_ids: (!currentTrip && committedRecipeIds.length > 0) ? committedRecipeIds : undefined,
       })
+      // 새 여행 생성 후 committed 상태 초기화 (다음 여행 생성 시 오염 방지)
+      clearPackCommitted()
+      clearShoppingCommitted()
       toast.success('새 캠핑이 등록되었습니다!')
       handleClose()
     } catch (err) {

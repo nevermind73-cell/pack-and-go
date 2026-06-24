@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { BookOpen, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useRecipes, type Recipe } from '@/hooks/useRecipes'
@@ -42,7 +43,9 @@ export function EatChecklist() {
   function handleRemoveRecipe(recipeId: string) {
     if (trip) {
       const next = sourceIds.filter((id) => id !== recipeId)
-      updateTrip.mutate({ id: trip.id, shopping_recipe_ids: next })
+      updateTrip.mutate({ id: trip.id, shopping_recipe_ids: next }, {
+        onError: (err) => toast.error(err instanceof Error ? err.message : '삭제 실패'),
+      })
     } else {
       shoppingStore.removeCommitted(recipeId)
     }
